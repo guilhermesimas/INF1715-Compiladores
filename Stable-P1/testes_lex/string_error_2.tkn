@@ -1,0 +1,13 @@
+
+1: TK_CHAR
+1: TK_ID : str1
+1: [
+1: ]
+1: =
+1: TK_STRING : String OK, a proxima nao fecha o "
+1: ;
+2: TK_CHAR
+2: TK_ID : str2
+2: [
+2: ]
+2: =
