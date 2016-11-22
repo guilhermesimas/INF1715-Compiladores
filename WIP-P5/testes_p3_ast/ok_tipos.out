@@ -1,0 +1,47 @@
+
+    1..[Function Declaration]
+    2....<Void>
+    2....main
+    2....[Block]
+    3......[Variable Declaration]
+    4........<Integer>
+    4........a
+    3......[Variable Declaration]
+    4........<Char>
+    4........b
+    3......[Variable Declaration]
+    4........<Float>
+    4........c
+    3......[Variable Declaration]
+    4........<Integer[]>
+    4........a
+    3......[Variable Declaration]
+    4........<Float[][]>
+    4........b
+    3......[Variable Declaration]
+    4........<Char[][][]>
+    4........c
+    3......[Variable Declaration]
+    4........<Integer>
+    4........a
+    4........b
+    4........c
+    4........d
+    4........e
+    4........f
+    3......[Variable Declaration]
+    4........<Float[]>
+    4........a
+    4........b
+    4........c
+    4........d
+    4........e
+    4........f
+    4........g
+    4........h
+    4........i
+    4........j
+    4........k
+    4........l
+    4........m
+    4........n

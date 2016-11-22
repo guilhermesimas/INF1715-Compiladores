@@ -1,0 +1,9 @@
+/* 
+atribuicoes devem ocorrer dentro de um bloco
+*/
+
+a = 3;
+
+void main() {
+	return;
+}

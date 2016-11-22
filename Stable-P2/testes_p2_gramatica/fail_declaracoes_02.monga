@@ -1,0 +1,7 @@
+/*
+Declaracao com dois tipos 
+*/
+
+void main() {
+	char int a;
+}

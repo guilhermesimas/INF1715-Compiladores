@@ -1,0 +1,35 @@
+int totalCompras;
+
+float media( int a , int b ) {
+	a = 1;
+	b = 2;
+	return (a+b);
+}
+
+int main() {
+	int a;
+	char b;
+	int[] arr;
+	float c;
+
+	arr = new int[3];
+
+	a = arr[arr[1+2]];
+	b = 1 + 2;
+	
+	c = media( a , b );
+	c = a + b;
+	c = a + 1.0;
+	c = b;
+	c = 1;
+	
+	{
+		int x;
+		int a;
+		int y;
+		
+		a = x + y;
+	}
+
+	return 99; 
+}

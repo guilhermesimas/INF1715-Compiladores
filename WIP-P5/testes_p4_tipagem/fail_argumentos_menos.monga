@@ -1,0 +1,14 @@
+int foo( int a , int b ) {
+	return a;
+}
+
+int main() {
+	int a;
+	int b;
+	int c;
+	
+	/* deveria receber 1 INT e 1 FLOAT... */
+	a = foo( a );
+	
+	return a;
+}

@@ -1,0 +1,63 @@
+int i;
+float f;
+char c;
+
+float funcao(float aaa, float bbb123) { 
+	float cccCCC;
+	cccCCC = aaa + bbb123 / 100 * 10 - aaa;
+
+	return cccCCC;
+}
+
+void funcaoB() {
+	return;
+}
+
+int main() {
+	/* Declaracoes */
+	int x;
+	int y , z;
+	
+	float a;
+	float b,c;
+	
+	char k;
+	char k,w;
+	
+	int[] a1;
+	int[][] a2;
+	int[][][] a3;
+	
+	a1 = new int[3];
+	a2 = new int[3];
+	a2[0] = new int[3];
+	
+	/* Whiles e whiles aninhados */
+	while( k == 0 ) {
+		a = 0;
+		
+		while( w <=0 ) { 
+			c = 10;
+		}
+		
+		b = 1;
+	}
+	
+	/* Ifs aninhados */
+	if ( k > 1 ) {
+		a = b;
+		if ( k >= 10 ) {
+			a = b;
+			c = a;
+		} else {
+			x = z;
+			z = y;
+			
+			if( c < a ) {
+				x = z;
+			}
+		}		
+	}
+	
+	return 0;
+}

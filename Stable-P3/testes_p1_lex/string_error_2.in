@@ -1,0 +1,3 @@
+char str1[] = "String OK, a proxima nao fecha o \"";
+char str2[] = "String com error;
+

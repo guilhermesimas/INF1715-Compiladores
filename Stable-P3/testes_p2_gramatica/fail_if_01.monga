@@ -1,0 +1,5 @@
+/* If sem Abrir */
+
+int main() {
+	if( 0 ) }
+}

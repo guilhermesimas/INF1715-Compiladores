@@ -1,0 +1,7 @@
+/*
+Declaracao com atribuicao 
+*/
+
+void main() {
+	int a = 10;
+}

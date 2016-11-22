@@ -1,0 +1,14 @@
+int main() {
+	int a;
+	float b;
+	
+	/* ok */
+	a = 1;
+	b = a;
+	
+	
+	/* falha */
+	a = 1.2;
+	
+	return a;
+}

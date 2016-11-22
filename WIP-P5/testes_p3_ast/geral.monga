@@ -1,0 +1,19 @@
+int totalCompras;
+
+float media( int a , int b ) {
+	return ( a + b ) / 2;
+}
+
+int main() {
+	int a;
+	int b;
+	int[] arr;
+	float c;
+	
+	a = 12;
+	b = 321;
+	
+	c = media( a , b );
+	
+	return 99; 
+}

@@ -1,0 +1,4 @@
+int a = 0;
+"Tudo acima dessa linha deve ser parseado
+essa linha acontece apois o erro fatal, nao deve ser parseada"
+int b = 0;

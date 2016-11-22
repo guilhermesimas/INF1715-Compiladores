@@ -1,0 +1,10 @@
+/* 
+Chamada de funcao com o tipo
+*/
+
+int main( ) {
+	
+	func(int a);
+
+	return;
+}

@@ -1,0 +1,10 @@
+/* 
+Parenteses sem operador externo;
+*/
+
+int main( ) {
+	
+	a = 10 ( 20 + 30 ) ( a + b );
+
+	return;
+}

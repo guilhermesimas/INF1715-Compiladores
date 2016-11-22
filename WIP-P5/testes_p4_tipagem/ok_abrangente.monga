@@ -1,0 +1,77 @@
+int 	globalInt;
+float 	globalFloat;
+
+int func1( int a , int b ) {
+	int c;
+	c = a + 2;
+	b = b + c;
+	
+	return a + b + b * 2 / c;
+}
+
+
+float func2( int a , float b ) {
+	float c;
+	
+	c = a + b + 10 + 20.0;
+
+	return c;
+}
+
+
+float func3( int a , int b ) {
+	return a + b;
+}
+
+
+float func4( int a ) {
+	return 10;
+}
+
+
+int main() {
+	int a;
+	char b;
+	int[] arr;
+	float c;
+
+	arr = new int[3];
+
+	a = arr[arr[1+2]];
+	b = 1 + 2;
+	
+	c = func3( a , b );
+	c = a * b;
+	c = a + 1.0;
+	c = b;
+	c = 1;
+	
+	arr[2] = 1;
+	
+	/* Gerar um warning de sombreamento do "a", outros OK */
+	{
+		int x;
+		int a;
+		int y;
+		float w;
+		
+		a = x + y;
+		
+		a = globalInt * 2;
+		w = globalFloat / 2;
+	}
+	
+	/* escopo paralelo ao anterior, nao pode gerar problemas */
+	{
+		int x,y;
+	}
+	
+	/* controles */
+	if( 1 > 1.0 ) {
+		while( 1 < 10 ) {
+			int whileVar1;		
+		}
+	}
+	
+	return 99; 
+}

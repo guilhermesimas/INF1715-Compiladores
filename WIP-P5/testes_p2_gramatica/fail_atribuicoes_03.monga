@@ -1,0 +1,5 @@
+/* Atribuicao a um tipo */
+
+void main() {
+	a = int;
+}

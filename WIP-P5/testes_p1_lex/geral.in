@@ -1,0 +1,77 @@
+/* Muitos Espaços, \t e \n */
+			
+			         
+	    
+	   
+	   
+				
+				
+		     
+		      	 	 		 	 
+		      	 	 		                
+                                             
+/* Simbolos Basicos */
+()[]{}=<>+-*/!
+
+/* Simbolos Duplos */
+<=
+>=
+==
+&&
+||
+
+/* Alguns simbolos não tratados por nenhuma regra */
+$
+@
+%
+
+/* Palavras reservadas */
+void
+char
+int
+float
+if
+else
+while
+new
+return
+
+/* Numeros */
+123
+999
+0xFF
+0x00
+0X1A
+0XF1
+20.5
+10e3
+10.5e4
+10.5e-5
+10.5e+6
+10.5E-7
+10.5E+8
+.5
+0X.1p2
+0X.1P2
+0x.1p2
+0x.1P2
+0X3.1p-3
+
+/* Strings */
+"String Simples"
+"String com escapes.\nNova Linha\t\tTabTab\t\t\"Aspas\" \\Barra\\"
+"String com \"comentario\" /*Comentario*/"
+/* Comentario com "string" */
+
+/* Char em pliques */
+char a = 'a';
+char b = '\n';
+char c = '\t';
+
+/* IDs e atribuicoes */
+int main(void) {
+	int a0_Adza = 99;
+	float z = sqrt( a0_Adza );
+	char b = 12;	
+}
+

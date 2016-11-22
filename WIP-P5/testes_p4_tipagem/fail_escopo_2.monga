@@ -1,0 +1,11 @@
+int mae() {
+	int x;
+}
+
+int main() {
+	int a;
+
+	a = x;
+	
+	return a;
+}

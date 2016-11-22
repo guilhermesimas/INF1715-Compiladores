@@ -1,0 +1,41 @@
+void func() { }
+
+int func() { }
+
+char func() {}
+
+float func() {}
+
+int[] func() {}
+
+char[][] func() {}
+
+void func( int a ) {}
+
+void func( char a ) {}
+
+void func( float a ) {}
+
+void func( int[][] a ) {}
+
+void func( int a , int b , float[][] c , char d , char[][][][][] e ) {
+	return a;
+}
+
+void func() {
+	return;
+}
+
+/* Chamadas */
+
+int main() {
+	func();
+	
+	func( a , b );
+	
+	func( 1 , 2 );
+	
+	a = func();
+	
+	a = func( func(a) , func( func() ) , 10 ) + 10;
+}

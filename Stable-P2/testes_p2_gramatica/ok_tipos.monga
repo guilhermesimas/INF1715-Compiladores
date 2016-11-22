@@ -1,0 +1,13 @@
+void main() {
+	int a;
+	char b;
+	float c;
+	
+	int[] a;
+	float[][] b;
+	char[][][] c;
+	
+	int a,b,c,d,e,f;
+	
+	float[] a,b,c,d,e,f,g,h,i,j,k,l,m,n;
+}

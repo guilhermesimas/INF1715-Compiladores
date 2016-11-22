@@ -1,0 +1,3 @@
+char str1[] = "String ok, o proximo tem escapes invalidos";
+char str2[] = "\k";
+

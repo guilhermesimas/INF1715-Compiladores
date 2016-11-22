@@ -1,0 +1,24 @@
+void main() {
+	if ( k > 1 ) {
+		a = b;
+		if ( k >= 10 ) {
+			a = b;
+			c = a;
+			
+			if( c < a ) {
+				x = z;
+			}
+		} else {
+			x = z;
+			z = y;
+			
+			if( c < a ) {
+				x = z;
+			}
+		}		
+	}
+	
+	if ( a ) { 
+	
+	}
+}

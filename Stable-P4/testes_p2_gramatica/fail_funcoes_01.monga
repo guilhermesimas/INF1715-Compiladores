@@ -1,0 +1,7 @@
+/* 
+Parametro/Argument do tipo void
+*/
+
+void main( void a ) {
+	return;
+}

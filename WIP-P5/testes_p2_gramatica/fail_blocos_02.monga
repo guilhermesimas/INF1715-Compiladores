@@ -1,0 +1,7 @@
+/* 
+Bloco sem fechar
+*/
+
+void main() {
+	int a;
+	a = 10;

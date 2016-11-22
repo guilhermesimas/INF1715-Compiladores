@@ -1,0 +1,5 @@
+/* New com o nome de variavel ao inves do tipo */
+
+void main() {
+	nome = new nome[3];
+}

@@ -1,0 +1,5 @@
+/* Else sem if */
+
+int main() {
+	else( 0 ) { }
+}

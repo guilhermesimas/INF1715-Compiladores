@@ -1,0 +1,9 @@
+void main() {
+	a = 1;
+	b = 1 + 1;
+	c = 1 + 1 * 1;
+	d = a + b;
+	
+	arr = new int[3];
+	arr[0] = new int[3];
+}
