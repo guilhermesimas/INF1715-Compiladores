@@ -1,0 +1,6 @@
+LLVM:
+
+C -> LLVM IR:
+clang -S -emit-llvm -arquivo.c
+
+
