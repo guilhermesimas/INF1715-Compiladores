@@ -211,7 +211,7 @@ ABS_node* ABS_literalString(char * str);
 // Id
 ABS_node* ABS_id(char * name , int lineNumber );
 
-// Cast ( Used in ABS tree typeing )
+// Cast ( Used in ABS tree type-ing )
 ABS_node* ABS_addCastNode( ABS_node* exp , int type );
 
 // Expressions

@@ -125,7 +125,7 @@ Para a etapa atual ( ETAPA 4 ) leia apenas o tópico 6.
 	Os arquivos de teste referentes a esta etapa residem na pasta:
 	testes_p4_tipagem
 
-	Sendo os *.monga a entrada
+	Sendo os *.monga as entradas
 	
 	6.2) Teste basico de funcionamento
 	Comando: make Types

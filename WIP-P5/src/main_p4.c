@@ -18,7 +18,7 @@ int main(void) {
 	
 	typeCheckABS();
 	
-	//ABS_print(2);
+	ABS_print(2); // Bom manter aqui, para DEBUG
 	
 	BUF_Free();
 	

@@ -570,16 +570,14 @@ void print_nodeId( ABS_node* node , int deepness ) {
 
 void print_nodeExp( ABS_node* node , int deepness ) {
 	printf("[Exp]");
+	//printf("%d",node->node.exp.type);
+	print_dataType( node->node.exp.type );	
+		
 	//printf("tag: %d" , node->tag );
 	deepness++;
-	// printf("\n");
-	// print_ident( deepness );
-	// printf("Type: ");
-	// print_dataType( node->node.exp.type );
-			
+
 	switch( node->tag ) {
 		case EXP_NEW:
-			print_dataType( node->node.exp.data.newexp.type );	
 			print_nodeLoop( node->node.exp.data.newexp.exp , deepness );	
 			break;
 			
@@ -633,6 +631,8 @@ void print_nodeExp( ABS_node* node , int deepness ) {
 
 void print_nodeVar( ABS_node* node , int deepness ) {
 	printf("[Variable]");
+	print_dataType( node->node.var.type );
+
 	print_nodeLoop(  node->node.var.id , deepness + 1 );
 	print_nodeLoop(  node->node.var.index , deepness + 3 );
 }

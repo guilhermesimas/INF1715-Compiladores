@@ -90,14 +90,28 @@ int nodeCheck_var( ABS_node* node ) {
 	
 	if( node->tag == VAR_ARRAY ) {
 		indexType = nodeCheck( node->node.var.index );
-		indexType = getArrayFinalType( indexType );
+		//indexType = getArrayFinalType( indexType );
 		
 		if( indexType != INT ) {
-			TOL_error("Index not an integer" , node->node.var.id->line , node->node.var.id->node.id.name  );
+			TOL_error("Index not an integer" , node->node.var.id->line , ""  );
 		}
 	}
 
+
 	typ = nodeCheck( node->node.var.id );
+
+	// Step down array type	
+	if( node->tag == VAR_ARRAY ) {
+		typ = typ - TYPEQTY;
+		
+		if( typ < 0 ) {
+			TOL_error("Too many indexation levels" , node->node.var.id->line , "" );
+		}
+	}
+	
+	
+	
+	node->node.var.type = typ;
 	return typ;
 }
 
@@ -143,6 +157,7 @@ int nodeCheck_funcCall( ABS_node* node ) {
 
 int nodeCheck_exp( ABS_node* node ) {	
 	int type1 , type2 , type3 , op;
+	int evalType;
 	ABS_node* cast;
 	
 	switch( node->tag ) {
@@ -151,7 +166,10 @@ int nodeCheck_exp( ABS_node* node ) {
 			if( type1 != INT ) {
 				TOL_error("Size of new array not an integer" , node->line , ""  );
 			}
-			return node->node.exp.data.newexp.type;	
+			
+			evalType = node->node.exp.data.newexp.type;	
+			evalType += TYPEQTY;
+			break;
 			
 		case EXP_BINOP:
 			op = node->node.exp.data.operexp.opr;
@@ -159,21 +177,16 @@ int nodeCheck_exp( ABS_node* node ) {
 			type2 = nodeCheck( node->node.exp.data.operexp.exp2 );		
 			
 			// Check types
-			if( ( type1 != FLOAT && type1 != INT ) || ( type2 != FLOAT && type2 != INT ) ) {
-				TOL_error( "Can only operate FLOATs and INTs" , node->line , "" );
-			}
-
-			// Cast, if necessary
-			if( type1 != type2 ) {
-				if( type1 == INT ) {
-					cast = ABS_addCastNode( node->node.exp.data.operexp.exp1 , FLOAT );
-					node->node.exp.data.operexp.exp1 = cast;
-				} else {
-					cast = ABS_addCastNode( node->node.exp.data.operexp.exp2 , FLOAT );
-					node->node.exp.data.operexp.exp2 = cast;
-				}
-				
-				type3 = FLOAT;				
+			if( type1 == INT && type2 == FLOAT ) {
+				cast = ABS_addCastNode( node->node.exp.data.operexp.exp1 , FLOAT );
+				node->node.exp.data.operexp.exp1 = cast;
+				type3 = FLOAT;
+			} else if ( type1 == FLOAT && type2 == INT ) {
+				cast = ABS_addCastNode( node->node.exp.data.operexp.exp2 , FLOAT );
+				node->node.exp.data.operexp.exp2 = cast;
+				type3 = FLOAT;
+			} else if ( type1 != type2 ) {
+				TOL_typeError( "Incompatible types in binary operation" , node->line , type1 , type2 );
 			} else {
 				type3 = type1;
 			}
@@ -184,38 +197,54 @@ int nodeCheck_exp( ABS_node* node ) {
 				case '/':
 				case '+':
 				case '-':
-					return type3;
+					evalType = type3;
+					break;
+					
+				default:
+					evalType = INT;
+					break;
 			}
-			return INT;
+			break;
 				
 		case EXP_CALL:
-			return nodeCheck_funcCall( node );
+			evalType = nodeCheck_funcCall( node );
+			break;
 			
 		case EXP_VAR:
-			return nodeCheck_list( node->node.exp.data.varexp );
+			evalType = nodeCheck_list( node->node.exp.data.varexp );
+			break;
 			
 		case EXP_PAREN:
-			return nodeCheck_list( node->node.exp.data.parenexp );	
+			evalType = nodeCheck_list( node->node.exp.data.parenexp );	
+			break;
 			
 		case EXP_UNOP:
 			op = node->node.exp.data.operexp.opr;
 			type1 = nodeCheck_list( node->node.exp.data.operexp.exp1 );
 
 			if( op == '-' ) {
-				return type1;
+				evalType = type1;
+			} else {
+				evalType = INT;
 			}
-			
-			return INT;
+		
+			break;
 			
 		case LIT_INT:
-			return INT;
+			evalType = INT;
+			break;
 			
 		case LIT_FLOAT:
-			return FLOAT;
+			evalType = FLOAT;
+			break;
 			
 		case LIT_STRING:
-			return STRING;	
+			evalType = STRING;	
+			break;
 	}
+	
+	node->node.exp.type = evalType;
+	return evalType;	
 }
 
 
@@ -236,15 +265,17 @@ int nodeCheck_command( ABS_node* node ) {
 			return INT;
 			
 		case CMD_ATTR:
-			type1 = getArrayFinalType( nodeCheck( node->node.cmd.attrcmd.var ) );
-			type2 = getArrayFinalType( nodeCheck( node->node.cmd.attrcmd.exp ) );
+			type1 = nodeCheck( node->node.cmd.attrcmd.var );
+			type2 = nodeCheck( node->node.cmd.attrcmd.exp );
 			
 			if( type1 == INT && type2 == FLOAT ) {
 				TOL_error( "Cannot cast FLOAT to INT" , node->node.cmd.attrcmd.var->line , "" );
 			} else if ( type1 == FLOAT && type2 == INT ) {
 				cast = ABS_addCastNode( node->node.cmd.attrcmd.exp , FLOAT );
 				node->node.cmd.attrcmd.exp = cast;
-			}
+			} else if( type1 != type2 ) {
+				TOL_typeError( "Incompatible types in attribution" , node->node.cmd.attrcmd.var->line , type1 , type2 );
+			} 
 
 			return INT;
 
