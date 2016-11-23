@@ -3,4 +3,5 @@ LLVM:
 C -> LLVM IR:
 clang -S -emit-llvm -arquivo.c
 
-
+SSA:
+http://ssabook.gforge.inria.fr/latest/book.pdf
