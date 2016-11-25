@@ -1,51 +1,27 @@
 #include "absSyntaxTree.h"
+#include "tools.h"
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 void print_nodeLoop( ABS_node* node , int deepness );
 static int printType;
 
-// String Len
-int UTIX_stringLen( char* str ) {
-	int i = 0;
-	
-	while( str[i] != '\0' ) {
-		i++;
-	}
-	
-	return i;
-}
-
-// Check Allocation
-void UTIX_checkAlloc( void* flag , const char* auxMsg  , char* auxRef ) {
-	if( flag == NULL ) {
-		fprintf(stderr, "\n\x1B[91mAllocation Error: %s" , auxMsg );
-		
-		if( auxRef != NULL ) {
-			fprintf(stderr, "%s" , auxRef );
-		}
-
-		fprintf(stderr, "\x1B[0m\n" );
-		exit(1);
-	}
-}
-
 // String Copy
-char* UTIX_stringCopy( char* str ) {
+char* stringCopy( char* str ) {
 	int i;
-	int sz = UTIX_stringLen( str ) + 1;
+	int sz = strlen( str ) + 1;
 	char* new = (char*) malloc( sizeof(char) * sz );
-	UTIX_checkAlloc( new , "String Copy Of => " , str );
 	
-	for( i = 0 ; i < sz ; i++ ) {
-		new[i] = str[i];
-	}
+	TOL_checkAlloc( new , "Falha ao copiar string" , str );
+	
+	strcpy( new , str );
 	
 	return new;
 }
 
-
+// ---------------------------------------------------------------
 
 ABS_node* createNode( int type , int tag ) {
 	ABS_node* node;
@@ -105,7 +81,7 @@ ABS_node* ABS_literalString( char * str ) {
 	
 	newNode = createNode( TYPE_EXP , LIT_STRING );
 	
-	newNode->node.exp.data.literal.vString = UTIX_stringCopy( str );
+	newNode->node.exp.data.literal.vString = stringCopy( str );
 	// newNode->node.exp.type = array(CHAR); // DEBUG
 	
 	return newNode;
@@ -117,56 +93,81 @@ ABS_node* ABS_id( char * name , int lineNumber ) {
     
     newNode = createNode( TYPE_ID, ID );
     
-	newNode->node.id.name = UTIX_stringCopy( name );
+	newNode->node.id.name = stringCopy( name );
 	newNode->line = lineNumber;
 	
 	return newNode;
 }
 
 ABS_node* ABS_addCastNode( ABS_node* exp , int type ) {
-	ABS_node * newNode;
+	ABS_node* reallocNode;
+	ABS_node* castNode;
 		
-    newNode = createNode( TYPE_EXP , CAST );	
-		
-	newNode->node.exp.type = type;
-	newNode->node.exp.data.cast = exp;
+	// Make a newNode as a copy of the node to be casted
+	reallocNode = createNode( exp->type , exp->tag );		
+   	memcpy( reallocNode , exp , sizeof(ABS_node) );
+    
+    // Create the cast node
+    castNode = createNode( TYPE_EXP , CAST );	    
+	castNode->node.exp.type = type;
+	castNode->node.exp.data.cast = reallocNode;
+    castNode->line = exp->line;	
+    
+    // Copy the casted node
+   	memcpy( exp , castNode , sizeof(ABS_node) );  	
+   	
+   	// Free castNode ( already copied )
+   	free(castNode);	
 	
-    newNode->line = exp->line;		
-	
-	return newNode;
+	return exp;
 }
+
 
 ABS_node* ABS_expOpr( int opr, ABS_node* exp1, ABS_node* exp2  ) {
 	ABS_node* newNode;
+	int type;
 	
+	// Classify operations types
 	if (exp2 == NULL) {
-        newNode = createNode( TYPE_EXP , EXP_UNOP );
+		// Unary
+		if( opr == '!' ) {
+			type = EXP_NOT;
+		} else {
+			type = EXP_UNOP;
+        }
     }
     else {
-        newNode = createNode( TYPE_EXP , EXP_BINOP );
+    	// Binary
+    	switch( opr ) {
+    		case '-':
+    		case '+':
+    		case '*':
+    		case '/':
+    			type = EXP_ARIT;
+    			break;
+    			
+    		case TK_AND:
+    		case TK_OR:
+    			type = EXP_ANDOR;	
+    			break;
+    			
+    		default:
+    			type = EXP_COMP;
+    			break;
+    	}
     }
+    
+    // Create and return NODE
+	newNode = createNode( TYPE_EXP , type );
     
     newNode->node.exp.type = -1;
     newNode->node.exp.data.operexp.opr = opr;
     newNode->node.exp.data.operexp.exp1 = exp1;
 	newNode->node.exp.data.operexp.exp2 = exp2;
 	
-	newNode->line = exp1->line;
+	newNode->line = exp1->line;    
 
 	return newNode;
-}
-
-
-ABS_node* ABS_expParented(ABS_node* exp) {
-    ABS_node* newNode;
-    
-    newNode = createNode( TYPE_EXP , EXP_PAREN);
-    
-    newNode->node.exp.data.parenexp = exp;
- 
- 	newNode->line = exp->line;
-    
-    return newNode;
 }
 
 
@@ -231,6 +232,8 @@ ABS_node* ABS_varMono(ABS_node* id){
 
     newNode = createNode( TYPE_VAR , VAR_MONO );
     
+    newNode->node.var.type = -1;
+    
 	newNode->node.var.id = id;
 	newNode->node.var.index = NULL;
 	
@@ -241,14 +244,6 @@ ABS_node* ABS_varMono(ABS_node* id){
 
 
 ABS_node* ABS_declVar(int type, ABS_node* id){
-	/* SUGAR
-		Declarações do tipo: <type> <id1>,<id2>,<id3>...;
-		serão transformadas em uma lista de declarações:
-		<type> <id1>;
-		<type> <id2>;
-		<type> <id3>; ...
-	*/
-
 	ABS_node* declFirstNode = NULL;
 	ABS_node* declLastNode = NULL;
 	ABS_node* declCurrentNode;	
@@ -569,19 +564,79 @@ void print_nodeId( ABS_node* node , int deepness ) {
  
 
 void print_nodeExp( ABS_node* node , int deepness ) {
-	printf("[Exp]");
-	//printf("%d",node->node.exp.type);
+	// Print Header
+	printf("[Exp-");
+	
+	switch( node->tag ) {
+		case CAST:
+			printf("Cast");
+			break;
+		
+		case EXP_NEW:
+			printf("New");
+			break;
+			
+		case EXP_ARIT:
+			printf("Arit");
+			break;
+			
+		case EXP_COMP:
+			printf("Comp");
+			break;		
+		
+		case EXP_ANDOR:
+			printf("AndOr");
+			break;
+
+		case EXP_CALL:
+			printf("Call");
+			break;
+			
+		case EXP_VAR:
+			printf("Var");
+			break;
+			
+		case EXP_UNOP:
+			printf("UnaryOp");
+			break;
+		
+		case EXP_NOT:
+			printf("Not");
+			break;		
+			
+		case LIT_INT:
+			printf("INT");
+			break;	
+			
+		case LIT_FLOAT:
+			printf("FLOAT");
+			break;	
+			
+		case LIT_STRING:
+			printf("STRING");
+			break;	
+	}
+	printf("]");
+	
+	// Print Data Type
 	print_dataType( node->node.exp.type );	
 		
-	//printf("tag: %d" , node->tag );
+	// Increase Deepness
 	deepness++;
 
+	// Print specific data
 	switch( node->tag ) {
+		case CAST:
+			print_nodeLoop( node->node.exp.data.cast , deepness );	
+			break;
+	
 		case EXP_NEW:
 			print_nodeLoop( node->node.exp.data.newexp.exp , deepness );	
 			break;
 			
-		case EXP_BINOP:
+		case EXP_ARIT:
+		case EXP_COMP:
+		case EXP_ANDOR:
 			print_nodeLoop( node->node.exp.data.operexp.exp1 , deepness );
 			print_operator( node->node.exp.data.operexp.opr , deepness );
 			print_nodeLoop( node->node.exp.data.operexp.exp2 , deepness );		
@@ -590,7 +645,6 @@ void print_nodeExp( ABS_node* node , int deepness ) {
 		case EXP_CALL:
 			printf("\n");
 			print_ident( deepness );
-			printf("[Call]");
 			print_nodeLoop( node->node.exp.data.callexp.exp1 , deepness + 1 );	
 			print_nodeLoop( node->node.exp.data.callexp.exp2 , deepness + 1 );	
 			break;
@@ -599,13 +653,10 @@ void print_nodeExp( ABS_node* node , int deepness ) {
 			print_nodeLoop( node->node.exp.data.varexp , deepness );
 			break;
 			
-		case EXP_PAREN:
-			print_nodeLoop( node->node.exp.data.parenexp , deepness );	
-			break;
-			
 		case EXP_UNOP:
+		case EXP_NOT:
+			print_operator( node->node.exp.data.operexp.opr , deepness );		
 			print_nodeLoop( node->node.exp.data.operexp.exp1 , deepness );
-			print_operator( node->node.exp.data.operexp.opr , deepness );
 			break;
 			
 		case LIT_INT:

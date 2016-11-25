@@ -4,54 +4,56 @@
     2....main
     2....[Block]
     3......[Attribution]
-    4........[Variable]
+    4........[Variable]<Char>
     5..........a
-    4........[Exp]
+    4........[Exp]<Integer>
     5..........1
     3......[Attribution]
-    4........[Variable]
+    4........[Variable]<Char>
     5..........b
-    4........[Exp]
-    5..........[Exp]
+    4........[Exp]<Unknown>
+    5..........[Exp]<Integer>
     6............1
     5..........+
-    5..........[Exp]
+    5..........[Exp]<Integer>
     6............1
     3......[Attribution]
-    4........[Variable]
+    4........[Variable]<Char>
     5..........c
-    4........[Exp]
-    5..........[Exp]
+    4........[Exp]<Unknown>
+    5..........[Exp]<Integer>
     6............1
     5..........+
-    5..........[Exp]
-    6............[Exp]
+    5..........[Exp]<Unknown>
+    6............[Exp]<Integer>
     7..............1
     6............*
-    6............[Exp]
+    6............[Exp]<Integer>
     7..............1
     3......[Attribution]
-    4........[Variable]
+    4........[Variable]<Char>
     5..........d
-    4........[Exp]
-    5..........[Exp]
-    6............[Variable]
+    4........[Exp]<Unknown>
+    5..........[Exp]<Unknown>
+    6............[Variable]<Char>
     7..............a
     5..........+
-    5..........[Exp]
-    6............[Variable]
+    5..........[Exp]<Unknown>
+    6............[Variable]<Char>
     7..............b
     3......[Attribution]
-    4........[Variable]
+    4........[Variable]<Char>
     5..........arr
     4........[Exp]<Char>
-    5..........[Exp]
+    5..........[Exp]<Integer>
     6............3
     3......[Attribution]
-    4........[Variable]
-    5..........[Exp]
-    6............[Variable]
+    4........[Variable]<Char>
+    5..........[Exp]<Unknown>
+    6............[Variable]<Char>
     7..............arr
+    7..............[Exp]<Integer>
+    8................0
     4........[Exp]<Char>
-    5..........[Exp]
+    5..........[Exp]<Integer>
     6............3

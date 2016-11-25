@@ -19,11 +19,13 @@ typedef enum unionTag {
 	ID,
 	CAST,
 
-	EXP_BINOP,
+	EXP_UNOP,
+	EXP_ARIT,
+	EXP_ANDOR,
+	EXP_COMP,
+	EXP_NOT,
 	EXP_CALL,
 	EXP_VAR,
-	EXP_PAREN,
-	EXP_UNOP,
 	EXP_NEW,    
 
 	LIT_INT,
@@ -85,8 +87,6 @@ struct nodeExp {
     union {
         ABS_node* 	varexp;
         ABS_node* 	cast;
-        ABS_node* 	parenexp;
-        
 
         union {
             int 	vInt;
@@ -216,7 +216,6 @@ ABS_node* ABS_addCastNode( ABS_node* exp , int type );
 
 // Expressions
 ABS_node* ABS_expOpr( int opr, ABS_node* exp1, ABS_node* exp2 );
-ABS_node* ABS_expParented( ABS_node* exp );
 ABS_node* ABS_expVar( ABS_node* var );
 ABS_node* ABS_expCall( ABS_node* exp1 , ABS_node* exp2 );
 ABS_node* ABS_expNew( int type, ABS_node* exp );
