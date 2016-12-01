@@ -249,7 +249,9 @@ void nodeDive_exp( ABS_node* node ) {
 			nodeDive_list( node->node.exp.data.newexp.exp );	
 			break;
 			
-		case EXP_BINOP:
+		case EXP_ARIT:
+		case EXP_COMP:
+		case EXP_ANDOR:
 			nodeDive_list( node->node.exp.data.operexp.exp1 );
 			nodeDive_list( node->node.exp.data.operexp.exp2 );		
 			break;
@@ -263,11 +265,8 @@ void nodeDive_exp( ABS_node* node ) {
 			nodeDive_list( node->node.exp.data.varexp );
 			break;
 			
-		case EXP_PAREN:
-			nodeDive_list( node->node.exp.data.parenexp );	
-			break;
-			
 		case EXP_UNOP:
+		case EXP_NOT:
 			nodeDive_list( node->node.exp.data.operexp.exp1 );
 			break;
 			

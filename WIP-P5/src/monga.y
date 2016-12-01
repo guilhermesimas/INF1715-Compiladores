@@ -105,7 +105,7 @@ expBase:
 	| TK_NUM_FLOAT 					{ $$ = ABS_literalFloat($1); }
 	| TK_STRING						{ $$ = ABS_literalString($1); }
 	| variable						{ $$ = ABS_expVar($1); }
-	| '(' expLogic ')'  			{ $$ = ABS_expParented($2); }
+	| '(' expLogic ')'  			{ $$ = $2; }
 	| cmdCall						{ $$ = $1; }
 	| TK_NEW type '[' expLogic ']'	{ $$ = ABS_expNew($2, $4); }
 	;
