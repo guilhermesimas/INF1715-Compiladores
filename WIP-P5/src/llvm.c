@@ -41,8 +41,11 @@ void codeDeclFunc( nodeDecl* node ) {
  * generates code for variable definition
  */
 void codeDeclVar( nodeDecl* node ) {
-	//WIP
-
+	//%name = alloca <type>, align <size>
+	char* name = node->vardecl.id->node.id.name;
+	char* type = getType( node->vardecl.type );
+	int size = getSize( node->vardecl.type );
+	printf( "%%%s = alloca %s,align %d", name, type, size );
 }
 /*
  * returns the corresponding llvm type (int = i32, for example)
@@ -51,6 +54,19 @@ char* getType( int type ) {
 	switch ( type ) {
 	case INT: {
 		return "i32";
+		break;
+	}
+		//TODO: other cases
+
+	}
+}
+/*
+ * returns the corresponding llvm size (int = 4, for example)
+ */
+int getSize( int type ) {
+	switch ( type ) {
+	case INT: {
+		return 4;
 		break;
 	}
 		//TODO: other cases
