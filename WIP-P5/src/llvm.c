@@ -1,4 +1,34 @@
-void codeFuncDecl( nodeDecl* node ) {
+#include "llvm.h"
+
+void genCode() {
+	for ( ABS_node* n = programNode; n != NULL; n = n->next ) {
+		codeDecl( n );
+		printf( "\n" );
+	}
+}
+
+/*
+ * generates code for a definition (or declaration?)
+ */
+
+void codeDecl( ABS_node* node ) {
+	switch ( node->tag ) {
+	case DEC_FUNC: {
+		codeDeclFunc( &( node->decl ) );
+		break;
+	}
+	case DEC_VAR: {
+		codeDeclVar( &( node->decl ) );
+		break;
+	}
+	}
+}
+
+/*
+ * generates code for function definiton
+ */
+
+void codeDeclFunc( nodeDecl* node ) {
 	char* type = getType( node->funcdecl.type );
 	char* func_name = node->funcdecl.id->node.id; //@func_name
 	printf( "define %s @%s", type, func_name );
@@ -8,10 +38,24 @@ void codeFuncDecl( nodeDecl* node ) {
 
 }
 /*
+ * generates code for variable definition
+ */
+void codeDeclVar( nodeDecl* node ) {
+	//WIP
+
+}
+/*
  * returns the corresponding llvm type (int = i32, for example)
  */
 char* getType( int type ) {
-	//TODO
+	switch ( type ) {
+	case INT: {
+		return "i32";
+		break;
+	}
+		//TODO: other cases
+
+	}
 }
 /*
  * prints the parameters in the llvm format
