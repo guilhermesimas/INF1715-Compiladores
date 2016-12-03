@@ -1,0 +1,4 @@
+int monga_int( int a ) {
+	return a*10;
+}
+

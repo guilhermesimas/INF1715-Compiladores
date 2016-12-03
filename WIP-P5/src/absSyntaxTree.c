@@ -360,6 +360,7 @@ ABS_node* ABS_cmdRet( ABS_node* exp ) {
 	ABS_node* newNode;
     
     newNode = createNode( TYPE_CMD , CMD_RET );
+    newNode->node.cmd.retcmd.type = -1;
     newNode->node.cmd.retcmd.exp = exp;
     
     newNode->line = exp->line;

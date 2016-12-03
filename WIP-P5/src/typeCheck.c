@@ -335,8 +335,10 @@ int nodeCheck_command( ABS_node* node ) {
 			return -1;
 			
 		case CMD_RET:
-			type1 = nodeCheck( node->node.cmd.expcmd.exp );
+			type1 = nodeCheck( node->node.cmd.retcmd.exp );
 			type2 = getIDType( node );
+			
+			node->node.cmd.retcmd.type = type2;
 
 			if( type1 == INT && type2 == FLOAT ) {
 				ABS_addCastNode( node->node.cmd.expcmd.exp , FLOAT );

@@ -22,9 +22,13 @@ tipFilesA = $(wildcard $(tipTestFolder)*.monga)
 tipFilesB = $(patsubst $(tipTestFolder)%,%,$(tipFilesA))
 tipFileNames = $(patsubst %.monga,%,$(tipFilesB))
 
+codeTestFolder = ./testes_p5_llvm/
+codeFilesA = $(wildcard $(codeTestFolder)*.monga)
+codeFilesB = $(patsubst $(codeTestFolder)%,%,$(codeFilesA))
+codeFileNames = $(patsubst %.monga,%,$(codeFilesB))
 
 
-all:  mainp4
+all:  mainp5
 
 LexTestes: header mainp1
 	@echo " "	
@@ -116,7 +120,8 @@ Yacc: header mainp2
 	
 	./main_p2.out <$(gramTestFolder)geral.monga	
 		
-	@if [ $$? -eq 0 ] ; then \
+	@if [ $$? -eq 0 ];\
+	then \
 		echo -e "\e[42mTeste bem sucedido!\e[0m" ;\
 	else \
 		echo -e "\e[41mTeste FALHOU!\e[0m" ;\
@@ -130,7 +135,8 @@ AST: header mainp3b
 	
 	./main_p3b.out <$(astTestFolder)geral.monga
 		
-	@if [ $$? -eq 0 ] ; then \
+	@if [ $$? -eq 0 ];\
+	then \
 		echo -e "\e[42mTeste bem sucedido!\e[0m" ;\
 	else \
 		echo -e "\e[41mTeste FALHOU!\e[0m" ;\
@@ -144,7 +150,27 @@ Types: header mainp4
 	
 	./main_p4.out <$(tipTestFolder)geral.monga
 		
-	@if [ $$? -eq 0 ] ; then \
+	@if [ $$? -eq 0 ];\
+	then \
+		echo -e "\e[42mTeste bem sucedido!\e[0m" ;\
+	else \
+		echo -e "\e[41mTeste FALHOU!\e[0m" ;\
+	fi;\
+	
+	
+LLVM: header mainp5
+	@echo " "	
+	@echo "LLVM: Executando um teste generico:"
+	@echo " "	
+	
+	@./main_p5.out debug <$(codeTestFolder)geral.monga
+	@./main_p5.out <$(codeTestFolder)geral.monga >$(codeTestFolder)geral.ll	
+	@llc -filetype=obj $(codeTestFolder)geral.ll
+	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_int.c 
+	@./main_p5_monga.out int
+	
+	@if [ $$? -eq 0 ];\
+	then \
 		echo -e "\e[42mTeste bem sucedido!\e[0m" ;\
 	else \
 		echo -e "\e[41mTeste FALHOU!\e[0m" ;\
@@ -181,6 +207,12 @@ mainp4: header absSyntaxTree astKnit types typeCheck monga tools $(sourceFiles)m
 	gcc $(PARAM) -o main_p4.out absSyntaxTree.o astKnit.o typeCheck.o types.o lex.yy.o monga.tab.o tools.o $(sourceFiles)main_p4.c 
 
 
+mainp5: header absSyntaxTree astKnit types codeGen typeCheck monga tools $(sourceFiles)main_p5.c 
+	@echo " "
+	@echo "Compilando a main_5 e ligando:"
+	gcc $(PARAM) -o main_p5.out absSyntaxTree.o astKnit.o typeCheck.o llvm.o types.o lex.yy.o monga.tab.o tools.o $(sourceFiles)main_p5.c 
+
+
 lexcode: header $(sourceFiles)monga.lex
 	@echo " " 
 	@echo "Gerando o lex.yy.c:"
@@ -213,7 +245,11 @@ astKnit: monga $(sourceFiles)astKnit.c
 
 typeCheck: monga $(sourceFiles)typeCheck.c
 		gcc  $(FLAGS) -c $(sourceFiles)typeCheck.c 	
-				
+
+
+codeGen: monga $(sourceFiles)llvm.c
+		gcc  $(FLAGS) -c $(sourceFiles)llvm.c 					
+		
 		
 tools: $(sourceFiles)tools.c
 		gcc  $(FLAGS) -c $(sourceFiles)tools.c 	

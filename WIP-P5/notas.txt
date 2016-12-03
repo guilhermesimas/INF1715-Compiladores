@@ -2,6 +2,7 @@ LLVM:
 
 C -> LLVM IR:
 clang -S -emit-llvm -arquivo.c
+llc -filetype=obj clang.ll
 
 SSA:
 http://ssabook.gforge.inria.fr/latest/book.pdf

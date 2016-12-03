@@ -122,6 +122,7 @@ union nodeDecl {
 
 	struct {
 		int 		type;
+		int			lastCodeID;
 		ABS_node* 	id;
     } vardecl;
     
@@ -156,6 +157,7 @@ union nodeCMD {
 
 	struct {
 		ABS_node* 	exp;
+		int 		type;
 	} retcmd;
 
 	struct {
