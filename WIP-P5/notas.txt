@@ -1,8 +1,157 @@
 LLVM:
 
 C -> LLVM IR:
-clang -S -emit-llvm -arquivo.c
+clang -S -emit-llvm arquivo.c
 llc -filetype=obj clang.ll
 
 SSA:
 http://ssabook.gforge.inria.fr/latest/book.pdf
+
+
+
+Trabalho 5 de compiladores: Percorrer a árvore e gerar código para (quase) cada nó.
+
+Condições, Valores Verdade e Booleanos
+Booleanos são true e false. Valores Verdade são o que considero como como verdade ou falso (como o true, false, número diferentes de 0, etc).
+Condição é algo que controla código (if, while, ||, &&, for, operador ternário; switch não é).
+
+cond  : exp > exp
+      | exp < exp
+      | exp >= exp
+      | exp <= exp
+      | exp == exp
+      | exp != exp
+      | cond && cond
+      | cond || cond
+      | !cond
+
+statif  : TK_IF cond stat stat
+
+exp   : ....
+
+Transformar exp em cond: if (exp != 0)
+Transformar cond em exp: cond ? 1 : 0
+
+Se eu quisesse gerar código para:
+
+if( a > 0 || b < 0 || c == 0 )
+
+if( (a > 0 || b < 0) || c == 0 )
+
+%1 = cmp gt %a, 0 // %ie é um inteiro de 1 bit
+%2 = cast i32 %1
+%3 = cmp eq %2, 0
+jmp %3 L1 L2
+...
+
+Associação à esquerda é ruim, pois o curto circuito é feito com cada membro do ||.
+
+if( a > 0 || (b < 0 || c == 0) ) portanto é mais eficiente
+
+--- outro dia ---
+
+Parâmetro (especialmente) e local (variáveis) tem que ser allocado. Exemplo: %t42 = alloca i32
+Global: @g25 = ...
+
+codeExp - retorna temporário com valor da expressão
+codeVar - retorna temporário com endereço da variável. No caso de uma global, coloco num temporário e retorno o temporário. Mas não tem move no LLVM.
+Uma maneira de resolver isto é o getelementptr. Ex:
+
+%t315 = getelementptr i32* @g25, i32 0 // getelementptr pega o n-ésimo delemento a partir do ponteiro que é o primeiro argumento, é a forma do LLVM de fazer conta com ponteiro
+
+codeExp para string "..." é parecido com codeVar. Terei que criar uma string como global e retornar ela.
+
+Criar uma classe que representar ValorLLVM que pode ser temporário local, parâmetro ou constante.
+
+Voltando à aula passada: gerar código para condição.
+
+void codeCond (Exp *e, int lt, int lf) // lt é label true e lf é label false
+  - gera código para saltar para "lt" se o valor de "e" for verdadeiro, e para 'lf' caso contrário.
+{
+  int nt = newTemp(); // nt é newT, novo temporário
+  int te = codeExp(e);
+  geraCódigo("%nt = icmp eq i32 %te, 0
+              br i1 %nt label lt, lf");
+}
+
+O código acima é ingênuo. Acima, transforma-se valor em estrutura de controle. Algo do tipo: if (e != 0).
+A solução é tratar as expressões and, or, >=, <=, <, >, == e ! em codeCond e as demais em codeExp (+, *, -, etc).
+
+void codeCond(Exp* e, int lt, int lf) {
+  switch(e->tag) {
+    case E_OR : {
+      int nl = geraTemp(); // geraTemp() incrementa um contador e retorna o número
+      codeCond(e->e1, lt, nl);
+      codeLabel(nl);
+      codeCond(e->e2, lt, lf);
+      break;
+    }
+    case E_NOT :
+      codeCond(e->e1, lf, lt);
+      break;
+    case E_LT :
+      int r1 = codeExp(e->e1), r2 = codeExp(e->e2), t = newTemp(); // newTemp() == geraTemp()
+      geraCódigo("%t = icmp lt i32 %r1, %r2
+                  br i1 %t label lt, label lf");
+    default :
+      int nt = newTemp(); // nt é newT, novo temporário
+      int te = codeExp(e);
+      geraCódigo("%nt = icmp eq i32 %te, 0
+                br i1 %nt label lt, lf");
+  }
+}
+
+Exemplo: if ((a > b || a < 0) || !(a+b))
+                  e1                e2
+
+Chamadas:
+
+codeCond(e, lthen, lend);
+  codeCond(e1, lthen, l2);
+    condeCond(e11, lthen, l12);
+
+Código gerado:
+
+%t10 = load i32* %t1
+%t11 = load i32* %t2
+
+%t13 = icmp gt i32 %t10, %t11
+br i1 %t13 label lthen, label l12
+
+%t25 = add i32 %t23, %t24
+//chama default
+
+Outro exemplo (De Morgan): if (a > b || a < c)    if (!(!(a > b) && !(a < c))) têm que gerar o mesmo código
+
+codeCond(a > b, lthen, l2);
+l2: codeCond(a < c, lthen, lend);
+
+codeCond(..., lend, lthen);
+  codeCond(e1, l2, lthen);
+    codeCond(a > b, lthen, l2);
+
+
+...
+
+i = ... || ...
+
+i = phi i32 [1, %l1] [0, %l2] // mas o || pode ter vários caminhos para ser true e vários para ser falso. Colocarei tudo aqui?
+
+Solução:
+
+Criar 3 labels novos, 1 com o phi, outro onde converge todos os true's e outro onde converge todos os false's
+
+codeCond(e, 25, 26);
+
+%l25 : br label l27
+%l26 : br label l27
+%l27 : i = phi i32 [1, %l25] [0, %26]
+
+Toda vez que for fazer um código para pular, precisarei criar label.
+
+Um and tem que ser feito com phi.
+
+Alloca é memória de pilha. No new tenho que chamar malloc que C para memória dinâmica.
+
+Apresentação começa na próxima quinta. Apesar de não ser necessário criar slides, é necessário ter um roteiro e estar preparado para apresentar
+mesmo que o professor não pergunte como foi feito.
