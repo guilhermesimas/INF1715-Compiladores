@@ -561,6 +561,7 @@ void print_nodeUnknown( ABS_node* node , int deepness ) {
 
 void print_nodeId( ABS_node* node , int deepness ) {
 	printf("%s" , node->node.id.name );
+	printf("\t {Decl Dist: %d}",node->declDist );
 }
  
 

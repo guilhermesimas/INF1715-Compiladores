@@ -1,4 +1,12 @@
+int foo( int a ) {
+	int b;
+
+	return 1;
+}
+
 int monga_int( int a ) {
+	int b;
+
 	return a*10;
 }
 

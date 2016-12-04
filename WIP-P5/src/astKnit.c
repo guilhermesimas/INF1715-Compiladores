@@ -239,6 +239,7 @@ void nodeDive_id( ABS_node* node ) {
 		TOL_error("Invalid identifier" , node->line , node->node.id.name  );
 	} else {
 		node->declNode = matchingAbsNode;
+		node->declDist = existanceState;
 	}
 }
 
