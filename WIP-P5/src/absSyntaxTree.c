@@ -46,6 +46,7 @@ ABS_node* createNode( int type , int tag ) {
 	
 	// Knit Data
 	node->declNode = NULL;
+	node->declDist = -1;
 	
 	return node;
 }

@@ -107,7 +107,6 @@ int validateAttribution( int leftType , int rightType , ABS_node* rightNode ) {
 	
 	// Check types
 	if ( leftType == FLOAT && rightType == INT ) {
-		printf("\n\tATTR CAST\n");
 		ABS_addCastNode( rightNode , FLOAT );
 	}		
 	else if( leftType == INT && rightType == FLOAT ) {

@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
 
 	// Label
 	if( argc > 1 && strcmp( argv[1] , "debug" ) == 0 ) {	
-		printf("\nCODE GENERATED\n");
+		printf("\nCODE GENERATED:\n");
 	}
 	
 	// Generate Code

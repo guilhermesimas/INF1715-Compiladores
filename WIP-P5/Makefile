@@ -163,11 +163,15 @@ LLVM: header mainp5
 	@echo "LLVM: Executando um teste generico:"
 	@echo " "	
 	
+	@cat -n $(codeTestFolder)geral.monga		
+	
 	@./main_p5.out debug <$(codeTestFolder)geral.monga
 	@./main_p5.out <$(codeTestFolder)geral.monga >$(codeTestFolder)geral.ll	
 	@llc -filetype=obj $(codeTestFolder)geral.ll
-	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_int.c 
+	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_int.c
 	@./main_p5_monga.out int
+	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_float.c
+	@./main_p5_monga.out int	
 	
 	@if [ $$? -eq 0 ];\
 	then \

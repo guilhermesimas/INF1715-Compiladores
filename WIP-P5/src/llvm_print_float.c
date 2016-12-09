@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-int monga_int(int a);
+float monga_float(float a);
 
 int main(void) {
-	int i;
+	float f;
 
-	printf("\nCalling monga_int(10)" );
+	printf("\nCalling monga_float(10.0)" );
 	printf("\nreturn:\n");
 	
-	i = monga_int(10);
-	printf("%d",i);
+	f = monga_float(10.0);
+	printf("%f",f);
 	
 	printf("\n\n");
 	

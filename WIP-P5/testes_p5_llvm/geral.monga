@@ -1,12 +1,20 @@
-int foo( int a ) {
-	int b;
-
-	return 1;
+float monga_float( float a ) {
+	return a;
 }
 
 int monga_int( int a ) {
 	int b;
-
-	return a*10;
+	b = 0;
+	
+	if( a > 5 ) {
+		b = 1;
+		if( a > 20 ) {
+			b = 3;	
+		}
+	} else {
+		b = 2;
+	}
+	
+	return b;
 }
 

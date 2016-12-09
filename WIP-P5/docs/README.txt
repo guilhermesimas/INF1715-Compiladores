@@ -3,16 +3,17 @@ Professor: Roberto Ierusalimschy
 
 
 Rafael Augusto Gaseta França 	- 1421436
-Daniela Brazão Maksound			- 1321873
+Guilherme Simas					- ⁠⁠⁠1311812
 
 
-OBSERVAÇÃO: Este arquivo é referente a todas as estapas do trabalho.
+OBSERVAÇÃO!!! Este arquivo é referente a todas as etapas do trabalho.
 Sendo atualizado em cada nova etapa.
-Para a etapa atual ( ETAPA 4 ) leia apenas o tópico 6.
+Para a etapa atual ( ETAPA 5 ) leia apenas o tópico 7.
+
 
 0) 	Compilando a etapa atual
 	Basta executar "make"
-	Output: main_p4.out
+	Output: main_p5.out
 
 
 1) Requisitos
@@ -136,6 +137,37 @@ Para a etapa atual ( ETAPA 4 ) leia apenas o tópico 6.
 	Comando: make TypesTestes
 	Faz tudo que o "make Types" faz, além disso executa todos os testes da pasta "testes_p4_tipagem"
 
+
+
+
+7) Testes Codigo - Geração e compilação do codigo LLVM
+	7.1) Conceito
+	Com base em um arquivo de entrada:
+	-Executa os topicos anteriores
+	-Gera o codigo LLVM no arquivo *.ll a partir do arquivo *.monga
+	-Gera o *.o do codigo LLVM gerado
+	-Compila os "llvm_print_int.c" e "llvm_print_float.c" ligando com o *.o gerado
+	
+	Os arquivos de teste referentes a esta etapa residem na pasta:
+	testes_p5_llvm
+	
+	Falta geração de codigo para: IF, WHILE e ARRAY
+
+	7.2) Teste basico de funcionamento
+	Comando: make LLVM
+	Monta tudo, desde o *.lex e ao final executa um teste geral, o "geral.monga"
+
+	Para melhor analise, o make LLVL imprime:
+	-conteudo de "geral.monga"
+	-AST de "geral.monga"
+	-Codigo LLVM gerado por "geral.monga"
+	-Resultado da chamada do codigo LLVM compilado
+
+	Principais etapas: 
+	-Gera o LLVM do "geral.monga"
+	-Compila o LLVM em Obj
+	-Compila "llvm_print_int.c" e "llvm_print_float.c" ligando com o *.o gerado
+	-Executa o resultado da compilação e imprime a saida na tela
 	
 		
 	
