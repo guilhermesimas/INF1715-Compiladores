@@ -14,7 +14,15 @@ static int g_ident = 0; // Current identation level
 static int g_vid = 0; // Next FREE LLVM var id
 static int g_lid = 0; // Next FREE LLVM label id
 static int g_lastOpenLabel = -1; // Last opened label ID
-static int g_nextVarRefIndex = 0; // Next FREE
+static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
+static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
+static int g_globalScope = 0;
+
+// Structure to store variable tracking for SSA
+typedef struct trackingData {
+	int		id;
+	int 	type;
+} TrackingData;
 
 /*
  * returns the corresponding llvm type (int = i32, for example)
@@ -91,21 +99,47 @@ void codeAux_copyTrackingArray( int* arrayTo , int* arrayFrom ) {
 	}
 }
 
-// Control: reset function bound globals
-void codeAux_resetFuncGlobals( int* varTracking ) {
-	int i = 0;
 
+// Control: reset function LLVM_ID and LABEL globals
+void codeAux_resetFuncGlobals(void) {
 	// LLVM temporary and label ids control
 	g_vid = 0;
 	g_lid = 0;
 	g_lastOpenLabel = -1;
-
-	// Reset all local variables to not initialized
-	for ( i = 0 ; i < VAR_ARRAY_SIZE ; i++ ) {
-		varTracking[i] = VAR_NOT_INITIALIZED;
-	}
-	g_nextVarRefIndex = 0;
 }
+
+
+// Control: Prepare the system exit the global scope
+// Set g_lastGlobalIndex
+// Clear varTracking array ( if not null )
+codeAux_exitGlobalScope( int* varTracking ) {
+	int i = 0;
+
+	// Set the last global tracking index
+	g_lastGlobalIndex = g_nextVarRefIndex - 1;
+	
+	// Reset all local variables to not initialized
+	if( varTracking != NULL ) {
+		for ( i = g_nextVarRefIndex ; i < VAR_ARRAY_SIZE ; i++ ) {
+			varTracking[i] = VAR_NOT_INITIALIZED;
+		}
+	}
+	
+	// Set Global Scope Flag
+	g_globalScope = 0;	
+}
+
+
+// Control: Prepare the system enter/return to the global scope
+// Set g_nextVarRefIndex
+codeAux_enterGlobalScope( void ) { 
+	// Free Non Global Tracking Index Slots
+	g_nextVarRefIndex = g_lastGlobalIndex + 1;
+	
+	// Set Global Scope Flag
+	g_globalScope = 1;
+}
+
 
 // Generate new labelID
 int codeAux_getNewLabel( void ) {
@@ -209,9 +243,38 @@ void code_printIdented( const char* msg ) {
 	printf( "%s", msg );
 }
 
-// Print an id on llvm format, simple but grants name prefix
+
+// Print an id on chosen LLVM variable name format
+void code_llvmID_DUMMY( int id ) {
+	printf( "v_%d", id );
+}
+
+
+// Print an id on llvm temporary_var format
 void code_llvmID( int id ) {
-	printf( "%%v_%d", id );
+	printf( "%%" );
+	code_llvmID_DUMMY( id );
+}
+
+
+// Print an id on llvm global format
+void code_llvmID_GLB( int id ) {
+	printf( "@" );
+	code_llvmID_DUMMY( id );
+}
+
+
+// Print an id on llvm format from a Tracker Index
+// Decides if will be printed as global or temporary
+void code_llvmID_IDX( int idx , int* varTracking ) {
+	int id = varTracking[idx];
+	
+	if( idx <= g_lastGlobalIndex ) {
+		code_llvmID_GLB( id );
+	}
+	else {
+		code_llvmID( id );
+	}
 }
 
 // Print an id of an exp on llvm format, simple but grants name prefix
@@ -529,42 +592,43 @@ int codeCondEval( ABS_node* exp , int* varTracking ) {
  */
 void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking ) {
 	switch ( exp->tag ) {
-	case EXP_ANDOR: {
-		switch ( exp->node.exp.data.operexp.opr ) {
-		case TK_AND: {
-			int labelID = codeAux_getNewLabel();
-			codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 , varTracking );
-			code_label( labelID );
-			codeCond( exp->node.exp.data.operexp.exp2, label1, label2 , varTracking );
+		case EXP_ANDOR: {
+			switch ( exp->node.exp.data.operexp.opr ) {
+			case TK_AND: {
+				int labelID = codeAux_getNewLabel();
+				codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 , varTracking );
+				code_label( labelID );
+				codeCond( exp->node.exp.data.operexp.exp2, label1, label2 , varTracking );
+				break;
+			}
+			case TK_OR: {
+				int labelID = codeAux_getNewLabel();
+				codeCond( exp->node.exp.data.operexp.exp1, label1, labelID , varTracking );
+				code_label( labelID );
+				codeCond( exp->node.exp.data.operexp.exp2, label1, label2, varTracking );
+				break;
+			}
+			}
 			break;
 		}
-		case TK_OR: {
-			int labelID = codeAux_getNewLabel();
-			codeCond( exp->node.exp.data.operexp.exp1, label1, labelID , varTracking );
-			code_label( labelID );
-			codeCond( exp->node.exp.data.operexp.exp2, label1, label2, varTracking );
+
+		case EXP_NOT: {
+			codeCond( exp->node.exp.data.operexp.exp1, label2, label1, varTracking );
 			break;
 		}
+		default: {
+			//ALL THE REST
+			//Maybe get the value?
+			int condid = codeCondEval( exp, varTracking );
+			code_printIdent();
+			printf( "br i1 " );
+			code_llvmID( condid );
+			printf( ", label " );
+			code_llvmLabel( label1 );
+			printf( ", label " );
+			code_llvmLabel( label2 );
+			break;
 		}
-		break;
-	}
-	case EXP_NOT: {
-		codeCond( exp->node.exp.data.operexp.exp1, label2, label1, varTracking );
-		break;
-	}
-	default: {
-		//ALL THE REST
-		//Maybe get the value?
-		int condid = codeCondEval( exp, varTracking );
-		code_printIdent();
-		printf( "br i1 " );
-		code_llvmID( condid );
-		printf( ", label " );
-		code_llvmLabel( label1 );
-		printf( ", label " );
-		code_llvmLabel( label2 );
-		break;
-	}
 	}
 }
 
@@ -746,13 +810,19 @@ void codeDeclFunc( ABS_node* node ) {
 	const char* func_name = codeAux_getNodeName( node ); //@func_name
 	int varTracking[VAR_ARRAY_SIZE];
 
-	codeAux_resetFuncGlobals( varTracking );
+	// Prepare Global Variables
+	codeAux_resetFuncGlobals();
+	codeAux_exitGlobalScope( varTracking );
 
+	// Function LLVM Code
 	printf( "\ndefine %s @%s", type, func_name );
 
 	codeParam( node->node.decl.funcdecl.param , varTracking );
 
 	codeFuncBody( node->node.decl.funcdecl.block , varTracking );
+	
+	// Restore Tracking Index
+	codeAux_enterGlobalScope();
 }
 
 
