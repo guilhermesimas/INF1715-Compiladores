@@ -10,12 +10,12 @@ typedef enum nodeTypeEnum {
 	TYPE_DECL,
 	TYPE_VAR,
 	TYPE_CMD
-	
+
 } ABS_nodeTypeEnum;
 
 
 // Union Tags
-typedef enum unionTag {	
+typedef enum unionTag {
 	ID,
 	CAST,
 
@@ -26,7 +26,7 @@ typedef enum unionTag {
 	EXP_NOT,
 	EXP_CALL,
 	EXP_VAR,
-	EXP_NEW,    
+	EXP_NEW,
 
 	LIT_INT,
 	LIT_FLOAT,
@@ -44,19 +44,19 @@ typedef enum unionTag {
 	CMD_EXP,
 	CMD_BLOCK,
 	CMD_RET
-	
+
 } ABS_unionTag;
 
 
 
-typedef struct abs_node ABS_node;				
+typedef struct abs_node ABS_node;
 
-typedef struct nodeId ABS_nodeId;				
-typedef struct nodeVar ABS_nodeVar;				
-typedef struct nodeExp ABS_nodeExp;				
+typedef struct nodeId ABS_nodeId;
+typedef struct nodeVar ABS_nodeVar;
+typedef struct nodeExp ABS_nodeExp;
 
-typedef union nodeDecl ABS_nodeDecl;			
-typedef union nodeCMD ABS_nodeCMD;			
+typedef union nodeDecl ABS_nodeDecl;
+typedef union nodeCMD ABS_nodeCMD;
 
 
 
@@ -75,43 +75,43 @@ struct nodeId {
 struct nodeVar {
 	int type;
 
-    ABS_node* id;
-    ABS_node* index;
+	ABS_node* id;
+	ABS_node* index;
 };
 
 
 // Expression
 struct nodeExp {
-    int type;
-    
-    union {
-        ABS_node* 	varexp;
-        ABS_node* 	cast;
+	int type;
 
-        union {
-            int 	vInt;
-            float 	vFloat;
-            char* 	vString;
-        } literal;
-     
-        struct {
-            int 		opr;
-            ABS_node* 	exp1;
-            ABS_node* 	exp2;
-        } operexp;
+	union {
+		ABS_node* 	varexp;
+		ABS_node* 	cast;
 
-        struct {
-            ABS_node* 	exp1;
-            ABS_node* 	exp2;
-        } callexp;
+		union {
+			int 	vInt;
+			float 	vFloat;
+			char* 	vString;
+		} literal;
 
-        // New Array Info
-        struct {
-            int 		type;
-            ABS_node*	exp;
-        } newexp;
-        
-    } data;
+		struct {
+			int 		opr;
+			ABS_node* 	exp1;
+			ABS_node* 	exp2;
+		} operexp;
+
+		struct {
+			ABS_node* 	exp1;
+			ABS_node* 	exp2;
+		} callexp;
+
+		// New Array Info
+		struct {
+			int 		type;
+			ABS_node*	exp;
+		} newexp;
+
+	} data;
 };
 
 
@@ -124,8 +124,8 @@ union nodeDecl {
 		int 		type;
 		int			lastCodeID;
 		ABS_node* 	id;
-    } vardecl;
-    
+	} vardecl;
+
 	struct {
 		int 		type;
 		ABS_node* 	id;
@@ -138,7 +138,7 @@ union nodeDecl {
 
 // Commands
 union nodeCMD {
-	
+
 	struct {
 		ABS_node* 	exp;
 		ABS_node* 	cmd1;
@@ -164,7 +164,7 @@ union nodeCMD {
 		ABS_node* 	decl;
 		ABS_node* 	cmd;
 	} blockcmd;
-	
+
 	struct {
 		ABS_node* 	exp;
 	} expcmd;
@@ -182,8 +182,8 @@ struct abs_node {
 
 	// List Struture
 	ABS_node* 	next;
-	ABS_node* 	last;	
-	
+	ABS_node* 	last;
+
 	// Knit: where was declared ( TODO: move to relevant node types only )
 	ABS_node*	declNode;
 	int			declDist;
@@ -207,12 +207,12 @@ extern ABS_node* programNode;
 // FUNCTIONS --------------------------------------------------------------------------
 
 // Literals
-ABS_node* ABS_literalInt(int value);
-ABS_node* ABS_literalFloat(float value);
-ABS_node* ABS_literalString(char * str);
+ABS_node* ABS_literalInt( int value );
+ABS_node* ABS_literalFloat( float value );
+ABS_node* ABS_literalString( char * str );
 
 // Id
-ABS_node* ABS_id(char * name , int lineNumber );
+ABS_node* ABS_id( char * name , int lineNumber );
 
 // Cast ( Used in ABS tree type-ing )
 ABS_node* ABS_addCastNode( ABS_node* exp , int type );
@@ -229,17 +229,18 @@ ABS_node* ABS_varMono( ABS_node* id );
 
 // Declarations
 ABS_node* ABS_declVar( int type , ABS_node* id );
-ABS_node* ABS_declFunc( int type , ABS_node* id , ABS_node* param , ABS_node* block );
+ABS_node* ABS_declFunc( int type , ABS_node* id , ABS_node* param ,
+                        ABS_node* block );
 
 // Commands
 ABS_node* ABS_cmdIf( ABS_node* exp , ABS_node* cmd1 , ABS_node* cmd2 );
-ABS_node* ABS_cmdWhile( ABS_node* exp , ABS_node* cmd);
+ABS_node* ABS_cmdWhile( ABS_node* exp , ABS_node* cmd );
 ABS_node* ABS_cmdAttr( ABS_node* var , ABS_node* exp );
 ABS_node* ABS_cmdRet( ABS_node* exp );
-ABS_node* ABS_cmdExp(ABS_node* exp);
+ABS_node* ABS_cmdExp( ABS_node* exp );
 ABS_node* ABS_block( ABS_node* decl , ABS_node* cmd );
 
-// Lists 
+// Lists
 ABS_node* ABS_mergeList( ABS_node* list , ABS_node* element );
 
 

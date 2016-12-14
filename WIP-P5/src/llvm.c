@@ -398,26 +398,21 @@ int code_startLabel( void ) {
 	return labelID;
 }
 
-// Generate code for the evaluation of a conditional (for ifs and whiles)
-void codeCond( ABS_node* exp, char* label1, char*label2 ) {
+void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking );
+int codeExp( ABS_node* exp , int* varTracking ) ;
+/*
+ * Returns the ID of a i1 variable which contains the result of the expression
+ * TRUE/FALSE
+ */
+
+
+int codeCondEval( ABS_node* exp , int* varTracking ) {
+	int labelTrue = codeAux_getNewLabel();
+	int labelFalse = codeAux_getNewLabel();
 	switch ( exp->tag ) {
-	case EXP_ANDOR: {
-		switch ( exp->node.exp.data.operexp.opr ) {
-		case TK_AND: {
-			int labelID = codeAux_getNewLabel();
-			codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 );
-			code_label( labelID );
-			codeCond( exp->node.exp.data.operexp.exp2, label1, label2 );
-			break;
-		}
-		case TK_OR: {
-			int labelID = codeAux_getNewLabel();
-			codeCond( exp->node.exp.data.operexp.exp1, label1, labelID );
-			code_label( labelID );
-			codeCond( exp->node.exp.data.operexp.exp2, label1, label2 );
-			break;
-		}
-		}
+	case EXP_ANDOR:
+	case EXP_NOT: {
+		codeCond( exp, labelTrue, labelFalse , varTracking );
 		break;
 	}
 	case EXP_COMP: {
@@ -429,16 +424,145 @@ void codeCond( ABS_node* exp, char* label1, char*label2 ) {
 		//find the operation <eq/ne/sgt/sge/slt/sle>
 		//write the cmp
 		//write the branch using the cmp
+		int id1 , id2;
+		int type;
+		int operation;
+		ABS_node* exp1;
+		ABS_node* exp2;
+
+		type 		= exp->node.exp.type;
+		operation 	= exp->node.exp.data.operexp.opr;
+		exp1 		= exp->node.exp.data.operexp.exp1;
+		exp2 		= exp->node.exp.data.operexp.exp2;
+
+		id1 = codeExp( exp1 , varTracking );
+		id2 = codeExp( exp2 , varTracking );
+
+		// Start of the comparison line
+		code_printIdent();
+		int resultId = code_newVar();
+		printf( " = " );
+
+		// Operation Type
+		switch ( type ) {
+		case INT:
+			printf( "icmp " );
+			operation != TK_CE ? printf( "s" ) : 0 ; // Stray case, wtf clang?
+			break;
+
+		case FLOAT:
+			printf( "fcmp " );
+			break;
+		}
+
+		// Operation
+		switch ( operation ) {
+		case TK_CE:
+			printf( "eq" );
+			break;
+
+		case TK_GE:
+			printf( "ge" );
+			break;
+
+		case '>':
+			printf( "gt" );
+			break;
+
+		case TK_LE:
+			printf( "le" );
+			break;
+
+		case '<':
+			printf( "lt" );
+			break;
+		}
+		printf( " " );
+
+		// Result Type
+		code_type( type );
+		printf( " " );
+
+		// Operator1
+		code_nodeRepresentation( exp1 , id1 );
+		printf( " , " );
+
+		// Operator2
+		code_nodeRepresentation( exp2 , id2 );
+		return resultId;
+	}
+
+	default: {
+		// TODO: Tratar literal
+		int expid = codeExp( exp , varTracking );
+		// %answer = i1
+		code_printIdent();
+		int resultId = code_newVar();
+		switch ( exp->node.exp.type ) {
+		case INT: {
+			printf( " = icmp ne i32 0, " );
+			break;
+		}
+		case FLOAT: {
+			printf( " = fcmp une float 0, " );
+			break;
+		}
+		}
+		code_llvmID( expid );
+		return resultId;
+	}
+	}
+	int labelPhi = codeAux_getNewLabel();
+	code_label( labelTrue );
+	code_jumpLabel( labelPhi );
+	code_label( labelFalse );
+	code_jumpLabel( labelPhi );
+	code_label( labelPhi );
+	code_printIdent();
+	int resultId = code_newVar();
+	printf( " = phi i1 [1,%%l_%d], [0,%%l_%d]", labelTrue, labelFalse );
+	return resultId;
+
+}
+/* Generate code for the evaluation of a conditional (for ifs and whiles)
+ * Returns the id of the variable that contains the evaluation of the conditional
+ */
+void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking ) {
+	switch ( exp->tag ) {
+	case EXP_ANDOR: {
+		switch ( exp->node.exp.data.operexp.opr ) {
+		case TK_AND: {
+			int labelID = codeAux_getNewLabel();
+			codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 , varTracking );
+			code_label( labelID );
+			codeCond( exp->node.exp.data.operexp.exp2, label1, label2 , varTracking );
+			break;
+		}
+		case TK_OR: {
+			int labelID = codeAux_getNewLabel();
+			codeCond( exp->node.exp.data.operexp.exp1, label1, labelID , varTracking );
+			code_label( labelID );
+			codeCond( exp->node.exp.data.operexp.exp2, label1, label2, varTracking );
+			break;
+		}
+		}
 		break;
 	}
-	case NOT: {
-		codeCond( exp->node.exp.data.operexp.exp1, label2, label1 );
+	case EXP_NOT: {
+		codeCond( exp->node.exp.data.operexp.exp1, label2, label1, varTracking );
 		break;
 	}
 	default: {
 		//ALL THE REST
 		//Maybe get the value?
-		value ? 1 : 0;
+		int condid = codeCondEval( exp, varTracking );
+		code_printIdent();
+		printf( "br i1 " );
+		code_llvmID( condid );
+		printf( ", label " );
+		code_llvmLabel( label1 );
+		printf( ", label " );
+		code_llvmLabel( label2 );
 		break;
 	}
 	}
@@ -778,7 +902,7 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		// code_llvmLabel( elseLabel );
 		// g_lastOpenLabel = -1;
 
-		codeCond( cmd->node.cmd.ifcmd.exp, thenLabel, elseLabel );
+		codeCond( cmd->node.cmd.ifcmd.exp, thenLabel, elseLabel , varTracking );
 		//----------------------------END OF CODE COND
 
 		// Then Label Block
@@ -865,77 +989,24 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 	}
 
 
-	case EXP_COMP: {
-		int id1 , id2;
-		int type;
-		int operation;
-		ABS_node* exp1;
-		ABS_node* exp2;
-
-		type 		= exp->node.exp.type;
-		operation 	= exp->node.exp.data.operexp.opr;
-		exp1 		= exp->node.exp.data.operexp.exp1;
-		exp2 		= exp->node.exp.data.operexp.exp2;
-
-		id1 = codeExp( exp1 , varTracking );
-		id2 = codeExp( exp2 , varTracking );
-
-		// Start of the comparison line
+	case EXP_COMP:
+	case EXP_ANDOR: {
+		int condid = codeCondEval( exp, varTracking );
 		code_printIdent();
 		id = code_newVar();
-		printf( " = " );
-
-		// Operation Type
-		switch ( type ) {
-		case INT:
-			printf( "icmp " );
-			operation != TK_CE ? printf( "s" ) : 0 ; // Stray case, wtf clang?
-			break;
-
-		case FLOAT:
-			printf( "fcmp " );
+		printf( " = zext i1 " );
+		code_llvmID( condid );
+		printf( " to " );
+		switch ( exp->node.exp.type ) {
+		case INT: {
+			printf( "i32" );
 			break;
 		}
-
-		// Operation
-		switch ( operation ) {
-		case TK_CE:
-			printf( "eq" );
-			break;
-
-		case TK_GE:
-			printf( "ge" );
-			break;
-
-		case '>':
-			printf( "gt" );
-			break;
-
-		case TK_LE:
-			printf( "le" );
-			break;
-
-		case '<':
-			printf( "lt" );
+		case FLOAT: {
+			printf( "float" );
 			break;
 		}
-		printf( " " );
-
-		// Result Type
-		code_type( type );
-		printf( " " );
-
-		// Operator1
-		code_nodeRepresentation( exp1 , id1 );
-		printf( " , " );
-
-		// Operator2
-		code_nodeRepresentation( exp2 , id2 );
-	}
-
-	case EXP_ANDOR: {
-		// Tokens: TK_AND , TK_OR
-		// TODO: Everything
+		}
 		break;
 	}
 
@@ -1003,7 +1074,7 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 
 			// Arg Reference
 			code_nodeType( argExp );
-			printf( " ", argType );
+			printf( " " );
 			code_nodeRepresentation( argExp , argVars[i] );
 
 			// argVars index
