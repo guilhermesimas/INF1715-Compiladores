@@ -14,6 +14,8 @@ static int g_ident = 0; // Current identation level
 static int g_vid = 0; // Next FREE LLVM var id
 static int g_lid = 0; // Next FREE LLVM label id
 static int g_lastOpenLabel = -1; // Last opened label ID
+
+static int* g_typeTracking = NULL; // Tracking of Index Types
 static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
 static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
 static int g_globalScope = 0;
@@ -493,10 +495,10 @@ int codeCondEval( ABS_node* exp , int* varTracking ) {
 		ABS_node* exp1;
 		ABS_node* exp2;
 
-		type 		= exp->node.exp.type;
 		operation 	= exp->node.exp.data.operexp.opr;
 		exp1 		= exp->node.exp.data.operexp.exp1;
 		exp2 		= exp->node.exp.data.operexp.exp2;
+		type 		= exp1->node.exp.type;
 
 		id1 = codeExp( exp1 , varTracking );
 		id2 = codeExp( exp2 , varTracking );
@@ -514,7 +516,7 @@ int codeCondEval( ABS_node* exp , int* varTracking ) {
 			break;
 
 		case FLOAT:
-			printf( "fcmp " );
+			printf( "fcmp o" );
 			break;
 		}
 
@@ -676,10 +678,18 @@ int codeCmd_atr( 	ABS_node* cmd , 	int* varTracking );
 int codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
                     ABS_node* operator2 , int* varTracking );
 
+
 void genASTCode( void ) {
 	ABS_node* thisNode = programNode;
+	
+	// Preparation	
+	g_typeTracking = (int*) malloc( sizeof(int) * VAR_ARRAY_SIZE );
 
+	// Code Generation
 	genCode_list( thisNode , NULL );
+	
+	// Finalization
+	free( g_typeTracking );
 }
 
 
@@ -773,26 +783,26 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 
 
 /*
- * generates code for declarations
+ * generates code for declarationsgetelementptr
  */
 
 void codeDecl( ABS_node* node , int* varTracking ) {
 	switch ( node->tag ) {
-	case DEC_FUNC: {
-		codeDeclFunc( node );
-		break;
-	}
-	case DEC_VAR: {
-		codeDeclVar( node , varTracking );
-		break;
-	}
+		case DEC_FUNC: {
+			codeDeclFunc( node );
+			break;
+		}
+		case DEC_VAR: {
+			codeDeclVar( node , varTracking );
+			break;
+		}
 	}
 }
 
 
 /*
  * generates code for variable definition
- * for SSA no code is need, but the state need to be set
+ * for SSA no code is need, but the state needs to be set
  */
 void codeDeclVar( ABS_node* node , int* varTracking ) {
 	// Mark the variable to "declared but not initialized"
@@ -946,34 +956,16 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		startLabel  = g_lastOpenLabel;
 		thenLabel 	= codeAux_getNewLabel();
 		elseLabel 	= codeAux_getNewLabel();
-		if ( cmd->node.cmd.ifcmd.cmd2 == NULL ) {
-			// IF do not have an ELSE block
-			phiLabel = elseLabel;
-		} else {
-			phiLabel 	= codeAux_getNewLabel();
-		}
+		phiLabel 	= codeAux_getNewLabel();
 
 		// Copy Tracking Arrays
 		codeAux_copyTrackingArray( varTrackingThen , varTracking );
 		codeAux_copyTrackingArray( varTrackingElse , varTracking );
 		declaredLimit = g_nextVarRefIndex;
 
-		//----------------------------BEGGINING OF CODE COND
-		// Solve conditional EXP ( TODO: CURTO CIRCUITO, LABELS, ETC! )
-		// expId = codeExp( cmd->node.cmd.ifcmd.exp , varTracking );
-
-		// Jump ( BAD SOLUTION, but working: need to be integrated with codeExp )
-		// code_printIdent();
-		// printf( "br i1 " );
-		// code_llvmID( expId );
-		// printf( " , label " );
-		// code_llvmLabel( thenLabel );
-		// printf( " , label " );
-		// code_llvmLabel( elseLabel );
-		// g_lastOpenLabel = -1;
-
+		// Code Cond
 		codeCond( cmd->node.cmd.ifcmd.exp, thenLabel, elseLabel , varTracking );
-		//----------------------------END OF CODE COND
+
 
 		// Then Label Block
 		code_label( thenLabel );
@@ -982,14 +974,10 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		code_endLabel( phiLabel );
 
 		// Else Label Block
-		if ( phiLabel != elseLabel ) {
-			code_label( elseLabel );
-			genCode_list( cmd->node.cmd.ifcmd.cmd2 , varTrackingElse );
-			elseLastLabel = g_lastOpenLabel;
-			code_endLabel( phiLabel );
-		} else {
-			elseLastLabel = startLabel;
-		}
+		code_label( elseLabel );
+		genCode_list( cmd->node.cmd.ifcmd.cmd2 , varTrackingElse );
+		elseLastLabel = g_lastOpenLabel;
+		code_endLabel( phiLabel );
 
 
 		// Phi Block -> PHI
@@ -1308,4 +1296,6 @@ int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
 
 	return retId;
 }
+
+// Ultimo push
 
