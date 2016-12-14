@@ -1,20 +1,26 @@
 float monga_float( float a ) {
-	return a;
+	float b;
+	float c;
+	float d;
+	b = 1;
+	c = 1;
+	d = (b==c);
+
+	if(c<a) {
+		d = 4;
+		if( c==b ) { 
+			d=2;
+		}
+		
+	}
+
+	
+	return d;
 }
 
 int monga_int( int a ) {
-	int b;
-	b = 0;
+
 	
-	if( a > 5 ) {
-		b = 1;
-		if( a > 20 ) {
-			b = 3;	
-		}
-	} else {
-		b = 2;
-	}
-	
-	return b;
+	return a;
 }
 

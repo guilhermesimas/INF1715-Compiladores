@@ -15,16 +15,11 @@ static int g_vid = 0; // Next FREE LLVM var id
 static int g_lid = 0; // Next FREE LLVM label id
 static int g_lastOpenLabel = -1; // Last opened label ID
 
-static int* g_typeTracking = NULL; // Tracking of Index Types
+static int g_typeTracking[VAR_ARRAY_SIZE]; // Tracking of Index Types
 static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
 static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
 static int g_globalScope = 0;
 
-// Structure to store variable tracking for SSA
-typedef struct trackingData {
-	int		id;
-	int 	type;
-} TrackingData;
 
 /*
  * returns the corresponding llvm type (int = i32, for example)
@@ -114,7 +109,7 @@ void codeAux_resetFuncGlobals(void) {
 // Control: Prepare the system exit the global scope
 // Set g_lastGlobalIndex
 // Clear varTracking array ( if not null )
-codeAux_exitGlobalScope( int* varTracking ) {
+void codeAux_exitGlobalScope( int* varTracking ) {
 	int i = 0;
 
 	// Set the last global tracking index
@@ -134,7 +129,7 @@ codeAux_exitGlobalScope( int* varTracking ) {
 
 // Control: Prepare the system enter/return to the global scope
 // Set g_nextVarRefIndex
-codeAux_enterGlobalScope( void ) { 
+void codeAux_enterGlobalScope( void ) { 
 	// Free Non Global Tracking Index Slots
 	g_nextVarRefIndex = g_lastGlobalIndex + 1;
 	
@@ -189,16 +184,22 @@ void debug_printTrackingArray( int* varTracking ) {
 // Link with AST: Set node tracked INDEX on LLVM Var Array ( mainly or declarations and atributions )
 int track_setVarRef( ABS_node* node ) {
 	switch ( node->tag ) {
-	case DEC_VAR:
-		node->node.decl.vardecl.lastCodeID = g_nextVarRefIndex;
-		g_nextVarRefIndex++;
-		return node->node.decl.vardecl.lastCodeID;
+		case DEC_VAR:
+			// Var Tracker Index
+			node->node.decl.vardecl.lastCodeID = g_nextVarRefIndex; 
+		
+			// Var Tracker Type
+			g_typeTracking[g_nextVarRefIndex] = node->node.decl.vardecl.type;
+		
+			// Control
+			g_nextVarRefIndex++;
+			return node->node.decl.vardecl.lastCodeID;
 
-	case VAR_MONO:
-		return track_setVarRef( node->node.var.id->declNode );
+		case VAR_MONO:
+			return track_setVarRef( node->node.var.id->declNode );
 
-	case EXP_VAR:
-		return track_setVarRef( node->node.exp.data.varexp );
+		case EXP_VAR:
+			return track_setVarRef( node->node.exp.data.varexp );
 	}
 }
 
@@ -681,15 +682,9 @@ int codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
 
 void genASTCode( void ) {
 	ABS_node* thisNode = programNode;
-	
-	// Preparation	
-	g_typeTracking = (int*) malloc( sizeof(int) * VAR_ARRAY_SIZE );
 
 	// Code Generation
 	genCode_list( thisNode , NULL );
-	
-	// Finalization
-	free( g_typeTracking );
 }
 
 
@@ -738,7 +733,7 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 			code_printIdent();
 			phiId = code_newVar();
 			printf( " = phi " );
-			printf( "i32" ); // TODO: detect var type.. Will be hard, need another structure. Idea: varTracker is an Array of Structs
+			code_type( g_typeTracking[i] );
 			printf( " " );
 
 			// Then Branch Check
@@ -1278,8 +1273,6 @@ int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
 
 	// Set the new ID
 	track_setVarId( var , varTracking , retId );
-
-
 
 	return retId;
 }
