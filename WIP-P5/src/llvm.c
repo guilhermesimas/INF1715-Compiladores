@@ -933,6 +933,19 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 
 	case CMD_WHILE: {
 		// TODO
+		int labelCond = codeAux_getNewLabel();
+		int labelBlock = codeAux_getNewLabel();
+		int labelEnd = codeAux_getNewLabel();
+		int labelPhi = codeAux_getNewLabel();
+		//ALL TRACKING NEEDS TO COME IN HERE
+		code_label( labelCond );
+		codeCond( cmd->node.cmd.whilecmd.exp, labelBlock, labelEnd, varTracking );
+		code_label( labelBlock );
+		//MORE TRACKING HERE
+		genCode_list( cmd->node.cmd.whilecmd.cmd, varTracking );
+		code_label( labelPhi );
+		codeIfPhi( /*TRACKING STUFF */ );
+
 		break;
 	}
 	}
