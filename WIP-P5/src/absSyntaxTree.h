@@ -184,7 +184,7 @@ struct abs_node {
 	ABS_node* 	next;
 	ABS_node* 	last;	
 	
-	// Knit: where was declared ( TODO: move to relevant node types only )
+	// Knit: where was declared ( TODO: move to relevant node types )
 	ABS_node*	declNode;
 	int			declDist;
 
