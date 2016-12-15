@@ -1,14 +1,21 @@
-float monga_float( float a ) {
-	float b;
-	
-	b = 1.0 + 2.0 + 3.0;
-	
-	return b;
-}
+int gb1;
+int gb2;
+int gb3;
+int gb4;
 
 int monga_int( int a ) {
-
+	gb1 = a;
 	
 	return a;
 }
+
+
+float monga_float( float a ) {
+	int b;
+	
+	b = monga_int( 15 );
+
+	return gb1;
+}
+
 

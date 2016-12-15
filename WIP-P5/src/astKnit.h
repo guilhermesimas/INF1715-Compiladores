@@ -6,7 +6,7 @@
 
 typedef struct _scopeNode 	ScopeNode;
 typedef struct _scopeLevel 	ScopeLevel;
-typedef struct _scopeTree 	ScopeTree;
+typedef struct _scopeList 	ScopeLevelList;
 
 struct _scopeNode {
     ScopeNode* 		next;
@@ -22,14 +22,14 @@ struct _scopeLevel {
 };
 
 
-struct _scopeTree {
+struct _scopeList {
 	ScopeLevel*		rootLevel;
 	ScopeLevel*		currentLevel;	
 	ABS_node* 		lastFunctionDeclaration;	
 	int				lastFuncReturned;
 };
 
-extern ScopeTree scopeTree;
+extern ScopeLevelList scopeLevelList;
 
 void knitABS(void);
 

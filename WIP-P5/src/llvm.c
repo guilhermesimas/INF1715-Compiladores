@@ -17,7 +17,7 @@ static int g_lastOpenLabel = -1; // Last opened label ID
 
 static int g_typeTracking[VAR_ARRAY_SIZE]; // Tracking of Index Types
 static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
-static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
+static int g_lastGlobalIndex = -1; // Last Tracking Index used by a Global Variable
 static int g_globalScope = 0;
 
 
@@ -109,7 +109,7 @@ void codeAux_copyTrackingArray( int* arrayTo , int* arrayFrom ) {
 // Control: reset function LLVM_ID and LABEL globals
 void codeAux_resetFuncGlobals( void ) {
 	// LLVM temporary and label ids control
-	g_vid = 0;
+	g_vid = g_lastGlobalIndex + 1;
 	g_lid = 0;
 	g_lastOpenLabel = -1;
 }
@@ -406,10 +406,13 @@ int code_alloca( int aType ) {
 
 
 // Generate code for: store oId of sType into dId
-void code_store( int sType , int oId , int dId ) {
+void code_store( int oId , int dIndex , int* varTracking ) {
 	char* type;
 	int size;
+	int sType;
 
+	// Store Info
+	sType = g_typeTracking[dIndex];
 	type = codeAux_getType( sType );
 	size = codeAux_getSize( sType );
 
@@ -418,7 +421,7 @@ void code_store( int sType , int oId , int dId ) {
 	printf( "store %s " , type );
 	code_llvmID_LOC( oId );
 	printf( ", %s* ", type );
-	code_llvmID_LOC( dId );
+	code_llvmID_IDX( dIndex , varTracking );
 	printf( ", align %d" , size );
 }
 
@@ -444,19 +447,24 @@ void code_storeLiteral( int sId , ABS_node* literal ) {
 	printf( ", align %d" , size );
 }
 
-// Generate code for: load and lId of lType and return its new ID
-// PS.: Unused right now
-int code_load( int lType , int lId  ) {
+// Generate code for: Load: load INDEX of 
+// Return: loaded Local Var ID
+int code_load( int index  , int* varTracking  ) {
 	int id;
+	int iType;
 	char* type;
 	int size;
 
-	type = codeAux_getType( lType );
-	size = codeAux_getSize( lType );
+	// Variable Info
+	iType = g_typeTracking[index];
+	type = codeAux_getType( iType );
+	size = codeAux_getSize( iType );
+	
+	// LLVM code
 	code_printIdent();
 	id = code_newVar();
 	printf( " = load %s, %s* " , type , type );
-	code_llvmID_LOC( lId );
+	code_llvmID_IDX( index , varTracking );
 	printf( ", align %d", size );
 
 	return id;
@@ -744,7 +752,7 @@ void cond_eval( ABS_node* exp, int tempID ) {
 void genCode_list( 	ABS_node* node , 	int* varTracking );
 void genCode( 		ABS_node* node , 	int* varTracking );
 void codeDecl( 		ABS_node* node , 	int* varTracking );
-void codeDeclFunc( 	ABS_node* node );
+void codeDeclFunc( 	ABS_node* node , 	int* varTracking );
 void codeDeclVar( 	ABS_node* node , 	int* varTracking );
 void codeParam( 	ABS_node* param , 	int* varTracking );
 void codeFuncBody( 	ABS_node* block , 	int* varTracking );
@@ -762,8 +770,15 @@ int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
 void genASTCode( void ) {
 	ABS_node* thisNode = programNode;
 
+	// Create Variable Change Tracking control
+	int varTracking[VAR_ARRAY_SIZE];
+		
+	// Root of the program is global:
+	// Set global state
+	codeAux_enterGlobalScope();
+	
 	// Code Generation
-	genCode_list( thisNode , NULL );
+	genCode_list( thisNode , varTracking );
 }
 
 
@@ -905,7 +920,7 @@ void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
 void codeDecl( ABS_node* node , int* varTracking ) {
 	switch ( node->tag ) {
 	case DEC_FUNC: {
-		codeDeclFunc( node );
+		codeDeclFunc( node , varTracking );
 		break;
 	}
 	case DEC_VAR: {
@@ -919,11 +934,41 @@ void codeDecl( ABS_node* node , int* varTracking ) {
 /*
  * generates code for variable definition
  * for SSA no code is need, but the state needs to be set
+ * Globals dont follow SSA rule.
  */
 void codeDeclVar( ABS_node* node , int* varTracking ) {
-	// Mark the variable to "declared but not initialized"
-	track_setVarRef( node );
-	track_setVarId( node , varTracking , VAR_NOT_INITIALIZED );
+	int trackIndex;
+	
+	// Give the variable a track index
+	trackIndex = track_setVarRef( node );
+
+	// Check code scope state
+	if( g_globalScope ) { 
+		// The code is in Global Scope
+		int iType , size , id;
+		// Generate new ID
+		id = codeAux_newVid();
+		track_setVarId( node , varTracking , id );		
+		
+		// Type and Size
+		iType = g_typeTracking[trackIndex];
+		size = 	codeAux_getSize( iType );
+	
+		// Code Line
+		code_printIdent();
+		code_llvmID_GLB( id );
+		printf(" = common global ");
+		code_type( iType );
+		printf(" 0 , align %d" , size );
+		
+		// Control
+		g_lastGlobalIndex = id;
+	}
+	else {
+		// The code is in a Local Scope
+		// Mark the variable to "declared but not initialized"
+		track_setVarId( node , varTracking , VAR_NOT_INITIALIZED );
+	}
 }
 
 
@@ -931,16 +976,16 @@ void codeDeclVar( ABS_node* node , int* varTracking ) {
 /*
  * generates code for function definiton
  */
-void codeDeclFunc( ABS_node* node ) {
+void codeDeclFunc( ABS_node* node , int* varTracking ) {
 	char* type = codeAux_getType( node->node.decl.funcdecl.type );
 	const char* func_name = codeAux_getNodeName( node ); //@func_name
-	int varTracking[VAR_ARRAY_SIZE];
 
 	// Prepare Global Variables
 	codeAux_resetFuncGlobals();
 	codeAux_exitGlobalScope( varTracking );
 
 	// Function LLVM Code
+	code_printIdent();
 	printf( "\ndefine %s @%s", type, func_name );
 
 	codeParam( node->node.decl.funcdecl.param , varTracking );
@@ -1173,11 +1218,26 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 
 	switch ( exp->tag ) {
 	case EXP_VAR: {
-		id = track_getVarId( exp , varTracking );
+		int trackIndex;
+		int tId;
+		
+		trackIndex = track_getVarRef( exp );
+		tId = track_getVarId( exp , varTracking );
 
-		if ( id < 0 ) {
+		// Check initialization
+		if ( tId < 0 ) {
 			TOL_error( "Variable referenced before initialization" , exp->line ,
 			           codeAux_getNodeName( exp ) );
+		}
+		
+		// Global transformation to temporary local
+		if( trackIndex <= g_lastGlobalIndex ) {
+			// Load global
+			id = code_load( trackIndex , varTracking );	
+		}
+		else {
+			// Return expression result
+			id = tId;
 		}
 
 		break;
@@ -1377,8 +1437,9 @@ void codeCmd_ret( ABS_node* cmd , int* varTracking ) {
  * generates code for attribution
  */
 int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
-	int retId , expId ;
+	int retId , expId;
 	int iVarType;
+	int trackIndex;
 
 	ABS_node* var = cmd->node.cmd.attrcmd.var;
 	ABS_node* exp = cmd->node.cmd.attrcmd.exp;
@@ -1403,8 +1464,19 @@ int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
 	
 	}
 
-	// Set the new ID
-	track_setVarId( var , varTracking , retId );
+	// Get Variable Track Index
+	trackIndex = track_getVarRef( var );	
+	
+	// Decide if variable is Local or Global
+	if( trackIndex > g_lastGlobalIndex ) {
+		// SSA local, no need for extra code
+		// Set the new ID
+		track_setVarId( var , varTracking , retId );
+	}
+	else {
+		// Global
+		code_store( retId , trackIndex , varTracking );
+	}
 
 	return retId;
 }

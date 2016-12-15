@@ -7,8 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-ScopeTree scopeTree;
-
+ScopeLevelList scopeLevelList;
 
 ABS_node* findID( char* id , ScopeLevel* tLevel , int* distance ) {
 	ScopeNode*	tNode;
@@ -16,7 +15,7 @@ ABS_node* findID( char* id , ScopeLevel* tLevel , int* distance ) {
 	int dist = 0;
 	
 	if( tLevel == NULL ) {
-		tLevel = scopeTree.currentLevel;
+		tLevel = scopeLevelList.currentLevel;
 	}
 	
 	tNode = tLevel->firstNode;
@@ -73,7 +72,7 @@ void newScopeNode( ABS_node* absNode ) {
 	} else {
 		id = absNode->node.decl.funcdecl.id->node.id.name;
 		
-		if( findID( id ,  scopeTree.rootLevel , &existanceState ) != NULL ) {
+		if( findID( id ,  scopeLevelList.rootLevel , &existanceState ) != NULL ) {
 			if( existanceState >= 0 ) {
 				TOL_error("Function already declared" , absNode->node.decl.funcdecl.id->line , id );
 			} 
@@ -90,13 +89,13 @@ void newScopeNode( ABS_node* absNode ) {
 	
 
 	// Add to the tree
-	if( scopeTree.currentLevel-> firstNode == NULL ) {
-		scopeTree.currentLevel->firstNode = nNode;
+	if( scopeLevelList.currentLevel-> firstNode == NULL ) {
+		scopeLevelList.currentLevel->firstNode = nNode;
 	} else {
-		scopeTree.currentLevel->lastNode->next = nNode;
+		scopeLevelList.currentLevel->lastNode->next = nNode;
 	}
 	
-	scopeTree.currentLevel->lastNode = nNode;
+	scopeLevelList.currentLevel->lastNode = nNode;
 }
 
 
@@ -112,10 +111,10 @@ ScopeLevel* newScopeLevel(void) {
 	nLevel->firstNode = NULL;
 	nLevel->lastNode = NULL;
 	
-	if( scopeTree.rootLevel == NULL ) {
+	if( scopeLevelList.rootLevel == NULL ) {
 		nLevel->upperLevel = NULL;
 	} else {
-		nLevel->upperLevel = scopeTree.currentLevel;
+		nLevel->upperLevel = scopeLevelList.currentLevel;
 	}
 	
 	return nLevel;
@@ -138,15 +137,15 @@ void freeScopeLevel(ScopeLevel* sLevel ) {
 }
 
 
-void initScopeTree(void) {
+void initScopeLevelList(void) {
 	ScopeLevel* topLevel 	= newScopeLevel();
-	scopeTree.rootLevel		= topLevel;
-	scopeTree.currentLevel	= topLevel;	
+	scopeLevelList.rootLevel		= topLevel;
+	scopeLevelList.currentLevel	= topLevel;	
 }
 
 
-void freeScopeTree(void) {
-	ScopeLevel* sLevel = scopeTree.currentLevel;
+void freeScopeLevelList(void) {
+	ScopeLevel* sLevel = scopeLevelList.currentLevel;
 	ScopeLevel* tLevel;
 	
 	while( sLevel != NULL ) {
@@ -172,13 +171,13 @@ void nodeDive_id( ABS_node* node );
 
 void enterScope(void) {
 	ScopeLevel* newLevel 		= newScopeLevel(); 
-	scopeTree.currentLevel		= newLevel;	
+	scopeLevelList.currentLevel		= newLevel;	
 }
 
 
 void exitScope(void) {
-	ScopeLevel* currentLevel 	= scopeTree.currentLevel;
-	scopeTree.currentLevel		= currentLevel->upperLevel;
+	ScopeLevel* currentLevel 	= scopeLevelList.currentLevel;
+	scopeLevelList.currentLevel		= currentLevel->upperLevel;
 	freeScopeLevel( currentLevel );	
 }
 
@@ -194,13 +193,13 @@ void nodeDive_list( ABS_node* node ) {
 void nodeDive_declaration( ABS_node* node ) { 
 	newScopeNode( node );
 	if( node->tag == DEC_FUNC ) {
-		scopeTree.lastFunctionDeclaration = node;
+		scopeLevelList.lastFunctionDeclaration = node;
 		
 		// Mark return
 		if( node->node.decl.funcdecl.type == VOID ) {
-			scopeTree.lastFuncReturned = 1;
+			scopeLevelList.lastFuncReturned = 1;
 		} else {
-			scopeTree.lastFuncReturned = 0;
+			scopeLevelList.lastFuncReturned = 0;
 		}
 		
 		// Enter Scope and Knit
@@ -213,10 +212,10 @@ void nodeDive_declaration( ABS_node* node ) {
 	
 		// Exit scope and clean
 		exitScope();
-		scopeTree.lastFunctionDeclaration = NULL;
+		scopeLevelList.lastFunctionDeclaration = NULL;
 		
 		// Check return
-		if( scopeTree.lastFuncReturned == 0 ) {
+		if( scopeLevelList.lastFuncReturned == 0 ) {
 			TOL_error("Fuction without return" , node->line , node->node.decl.funcdecl.id->node.id.name  );
 		}	
 	}
@@ -315,8 +314,8 @@ void nodeDive_command( ABS_node* node ) {
 			
 		case CMD_RET:
 			nodeDive_list( node->node.cmd.expcmd.exp );
-			node->declNode = scopeTree.lastFunctionDeclaration;
-			scopeTree.lastFuncReturned = 1;
+			node->declNode = scopeLevelList.lastFunctionDeclaration;
+			scopeLevelList.lastFuncReturned = 1;
 			break;
 	}
 }
@@ -355,11 +354,11 @@ void knitABS(void) {
 	
 	ABS_node* thisNode = programNode;	
 	
-	initScopeTree();
+	initScopeLevelList();
 	
 	nodeDive_list( thisNode );	
 	
-	freeScopeTree();
+	freeScopeLevelList();
 	
 	return;
 }
