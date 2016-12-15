@@ -17,7 +17,8 @@ static int g_lastOpenLabel = -1; // Last opened label ID
 
 static int g_typeTracking[VAR_ARRAY_SIZE]; // Tracking of Index Types
 static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
-static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
+static int g_lastGlobalIndex =
+    0; // Last Tracking Index used by a Global Variable
 static int g_globalScope = 0;
 
 
@@ -98,7 +99,7 @@ void codeAux_copyTrackingArray( int* arrayTo , int* arrayFrom ) {
 
 
 // Control: reset function LLVM_ID and LABEL globals
-void codeAux_resetFuncGlobals(void) {
+void codeAux_resetFuncGlobals( void ) {
 	// LLVM temporary and label ids control
 	g_vid = 0;
 	g_lid = 0;
@@ -114,25 +115,25 @@ void codeAux_exitGlobalScope( int* varTracking ) {
 
 	// Set the last global tracking index
 	g_lastGlobalIndex = g_nextVarRefIndex - 1;
-	
+
 	// Reset all local variables to not initialized
-	if( varTracking != NULL ) {
+	if ( varTracking != NULL ) {
 		for ( i = g_nextVarRefIndex ; i < VAR_ARRAY_SIZE ; i++ ) {
 			varTracking[i] = VAR_NOT_INITIALIZED;
 		}
 	}
-	
+
 	// Set Global Scope Flag
-	g_globalScope = 0;	
+	g_globalScope = 0;
 }
 
 
 // Control: Prepare the system enter/return to the global scope
 // Set g_nextVarRefIndex
-void codeAux_enterGlobalScope( void ) { 
+void codeAux_enterGlobalScope( void ) {
 	// Free Non Global Tracking Index Slots
 	g_nextVarRefIndex = g_lastGlobalIndex + 1;
-	
+
 	// Set Global Scope Flag
 	g_globalScope = 1;
 }
@@ -184,22 +185,22 @@ void debug_printTrackingArray( int* varTracking ) {
 // Link with AST: Set node tracked INDEX on LLVM Var Array ( mainly or declarations and atributions )
 int track_setVarRef( ABS_node* node ) {
 	switch ( node->tag ) {
-		case DEC_VAR:
-			// Var Tracker Index
-			node->node.decl.vardecl.lastCodeID = g_nextVarRefIndex; 
-		
-			// Var Tracker Type
-			g_typeTracking[g_nextVarRefIndex] = node->node.decl.vardecl.type;
-		
-			// Control
-			g_nextVarRefIndex++;
-			return node->node.decl.vardecl.lastCodeID;
+	case DEC_VAR:
+		// Var Tracker Index
+		node->node.decl.vardecl.lastCodeID = g_nextVarRefIndex;
 
-		case VAR_MONO:
-			return track_setVarRef( node->node.var.id->declNode );
+		// Var Tracker Type
+		g_typeTracking[g_nextVarRefIndex] = node->node.decl.vardecl.type;
 
-		case EXP_VAR:
-			return track_setVarRef( node->node.exp.data.varexp );
+		// Control
+		g_nextVarRefIndex++;
+		return node->node.decl.vardecl.lastCodeID;
+
+	case VAR_MONO:
+		return track_setVarRef( node->node.var.id->declNode );
+
+	case EXP_VAR:
+		return track_setVarRef( node->node.exp.data.varexp );
 	}
 }
 
@@ -271,8 +272,8 @@ void code_llvmID_GLB( int id ) {
 // Decides if will be printed as global or temporary
 void code_llvmID_IDX( int idx , int* varTracking ) {
 	int id = varTracking[idx];
-	
-	if( idx <= g_lastGlobalIndex ) {
+
+	if ( idx <= g_lastGlobalIndex ) {
 		code_llvmID_GLB( id );
 	}
 	else {
@@ -595,43 +596,43 @@ int codeCondEval( ABS_node* exp , int* varTracking ) {
  */
 void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking ) {
 	switch ( exp->tag ) {
-		case EXP_ANDOR: {
-			switch ( exp->node.exp.data.operexp.opr ) {
-			case TK_AND: {
-				int labelID = codeAux_getNewLabel();
-				codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 , varTracking );
-				code_label( labelID );
-				codeCond( exp->node.exp.data.operexp.exp2, label1, label2 , varTracking );
-				break;
-			}
-			case TK_OR: {
-				int labelID = codeAux_getNewLabel();
-				codeCond( exp->node.exp.data.operexp.exp1, label1, labelID , varTracking );
-				code_label( labelID );
-				codeCond( exp->node.exp.data.operexp.exp2, label1, label2, varTracking );
-				break;
-			}
-			}
+	case EXP_ANDOR: {
+		switch ( exp->node.exp.data.operexp.opr ) {
+		case TK_AND: {
+			int labelID = codeAux_getNewLabel();
+			codeCond( exp->node.exp.data.operexp.exp1, labelID, label2 , varTracking );
+			code_label( labelID );
+			codeCond( exp->node.exp.data.operexp.exp2, label1, label2 , varTracking );
 			break;
 		}
+		case TK_OR: {
+			int labelID = codeAux_getNewLabel();
+			codeCond( exp->node.exp.data.operexp.exp1, label1, labelID , varTracking );
+			code_label( labelID );
+			codeCond( exp->node.exp.data.operexp.exp2, label1, label2, varTracking );
+			break;
+		}
+		}
+		break;
+	}
 
-		case EXP_NOT: {
-			codeCond( exp->node.exp.data.operexp.exp1, label2, label1, varTracking );
-			break;
-		}
-		default: {
-			//ALL THE REST
-			//Maybe get the value?
-			int condid = codeCondEval( exp, varTracking );
-			code_printIdent();
-			printf( "br i1 " );
-			code_llvmID( condid );
-			printf( ", label " );
-			code_llvmLabel( label1 );
-			printf( ", label " );
-			code_llvmLabel( label2 );
-			break;
-		}
+	case EXP_NOT: {
+		codeCond( exp->node.exp.data.operexp.exp1, label2, label1, varTracking );
+		break;
+	}
+	default: {
+		//ALL THE REST
+		//Maybe get the value?
+		int condid = codeCondEval( exp, varTracking );
+		code_printIdent();
+		printf( "br i1 " );
+		code_llvmID( condid );
+		printf( ", label " );
+		code_llvmLabel( label1 );
+		printf( ", label " );
+		code_llvmLabel( label2 );
+		break;
+	}
 	}
 }
 
@@ -776,6 +777,31 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 	}
 }
 
+void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
+                   int* blockTracker, int limit ) {
+	int phiId;
+	for ( int i = 0; i < limit; i++ ) {
+		if ( blockTracker[i] != startTracker[i] ) {
+			// Variable changed, phi is needed
+			code_printIdent();
+			phiId = code_newVar();
+			printf( " = phi " );
+			code_type( g_typeTracking[i] );
+			printf( " " );
+			// Block branch check
+			printf( "[" );
+			code_llvmID( blockTracker[i] );
+			printf( " , " );
+			code_llvmLabel( blockLabel );
+			printf( "] , [" );
+			code_llvmID( startTracker[i] );
+			printf( " , " );
+			code_llvmLabel( originLabel );
+			printf( "]" );
+			startTracker[i] = phiId;
+		}
+	}
+}
 
 /*
  * generates code for declarationsgetelementptr
@@ -783,14 +809,14 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 
 void codeDecl( ABS_node* node , int* varTracking ) {
 	switch ( node->tag ) {
-		case DEC_FUNC: {
-			codeDeclFunc( node );
-			break;
-		}
-		case DEC_VAR: {
-			codeDeclVar( node , varTracking );
-			break;
-		}
+	case DEC_FUNC: {
+		codeDeclFunc( node );
+		break;
+	}
+	case DEC_VAR: {
+		codeDeclVar( node , varTracking );
+		break;
+	}
 	}
 }
 
@@ -825,7 +851,7 @@ void codeDeclFunc( ABS_node* node ) {
 	codeParam( node->node.decl.funcdecl.param , varTracking );
 
 	codeFuncBody( node->node.decl.funcdecl.block , varTracking );
-	
+
 	// Restore Tracking Index
 	codeAux_enterGlobalScope();
 }
@@ -986,19 +1012,35 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 
 	case CMD_WHILE: {
 		// TODO
+		int labelStart;
 		int labelCond = codeAux_getNewLabel();
 		int labelBlock = codeAux_getNewLabel();
 		int labelEnd = codeAux_getNewLabel();
 		int labelPhi = codeAux_getNewLabel();
-		//ALL TRACKING NEEDS TO COME IN HERE
+
+		int declaredLimit;
+
+		int varTrackingBlock[VAR_ARRAY_SIZE];
+
+		code_printIdented( "; WHILE" );
+
+		labelStart = g_lastOpenLabel;
+
+		codeAux_copyTrackingArray( varTrackingBlock, varTracking );
+		declaredLimit = g_nextVarRefIndex;
+		code_endLabel( labelPhi );
 		code_label( labelCond );
 		codeCond( cmd->node.cmd.whilecmd.exp, labelBlock, labelEnd, varTracking );
 		code_label( labelBlock );
-		//MORE TRACKING HERE
-		genCode_list( cmd->node.cmd.whilecmd.cmd, varTracking );
+		genCode_list( cmd->node.cmd.whilecmd.cmd, varTrackingBlock );
+		int blockLastLabel = g_lastOpenLabel;
+		code_jumpLabel( labelPhi );
 		code_label( labelPhi );
-		codeIfPhi( /*TRACKING STUFF */ );
-
+		codeWhilePhi( labelStart, labelBlock , varTracking, varTrackingBlock,
+		              declaredLimit );
+		code_endLabel( labelCond );
+		g_nextVarRefIndex = declaredLimit; //Why?
+		code_label( labelEnd );
 		break;
 	}
 	}
