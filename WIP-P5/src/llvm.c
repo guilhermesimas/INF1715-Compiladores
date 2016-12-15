@@ -1145,7 +1145,7 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		code_label( labelBlock );
 		printf( "\t; WHILE - Body Block" );		
 		genCode_list( cmd->node.cmd.whilecmd.cmd, varTrackingBlock );
-		int blockLastLabel = g_lastOpenLabel; // CHECK : PQ?
+		labelBlock = g_lastOpenLabel; // CHECK : PQ?
 		code_jumpLabel( labelPhi );
 		
 		// Phi Block
