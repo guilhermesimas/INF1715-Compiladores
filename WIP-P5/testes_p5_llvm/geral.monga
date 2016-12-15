@@ -1,24 +1,9 @@
 float monga_float( float a ) {
-	int i,j;
-	float c;
+	float b;
 	
-	i = 0;
-	j = 0;
+	b = 1.0 + 2.0 + 3.0;
 	
-	c = 0;
-	
-	while( i < 10 ) {
-		i = i + 1;
-		
-		j = 0;
-		while( j < 10 ) {
-			j = j + 1;
-			
-			c = c + 1.0;
-		}
-	}
-	
-	return c;
+	return b;
 }
 
 int monga_int( int a ) {

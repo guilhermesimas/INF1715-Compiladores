@@ -753,10 +753,7 @@ void codeCmd( 		ABS_node* cmd , 	int* varTracking );
 int codeExp( 		ABS_node* exp , 	int* varTracking );
 void codeCmd_ret( 	ABS_node* cmd , 	int* varTracking );
 int codeCmd_atr( 	ABS_node* cmd , 	int* varTracking );
-
-void codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
-                    ABS_node* operator2 , int* varTracking );
-                    
+                   
 int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
                     ABS_node* operator2 , int* varTracking );
 
@@ -1325,17 +1322,24 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 	return id;
 }
 
-// Generate code for: LLVM arit expression
-void codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
+
+// Generate code for: LLVM arit expression with atribuition to a Local ID
+// Returns ID of the Local with the result
+int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
                     ABS_node* operator2 , int* varTracking ) {
-                    
+	int 	id;
 	int 	id1;
 	int 	id2;
-	
+
 	// Generate code for both operators
 	operator1 ? id1 = codeExp( operator1 , varTracking ) : 0;
 	operator2 ? id2 = codeExp( operator2 , varTracking ) : 0;
 
+	// Result Variable	
+	code_printIdent();
+	id = code_newVar();
+	printf( " = " );
+	
 	// operation name and type
 	code_ArithmeticType( resultType , operation );
 
@@ -1346,20 +1350,7 @@ void codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
 	printf( " , " );
 
 	// Reference 2
-	operator2 ? code_nodeRepresentation( operator2 , id2 ) : printf( "0" );            
-}
-
-
-// Generate code for: LLVM arit expression with atribuition to a Local ID
-// Returns ID of the Local with the result
-int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
-                    ABS_node* operator2 , int* varTracking ) {
-	int 	id;
-
-	code_printIdent();
-	id = code_newVar();
-	printf( " = " );
-	codeArithmetic( resultType , operation , operator1 , operator2 , varTracking );
+	operator2 ? code_nodeRepresentation( operator2 , id2 ) : printf( "0" );   	
 
 	return id;
 }
@@ -1409,6 +1400,7 @@ int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
 	default:
 		retId = codeExp( exp , varTracking );
 		break;
+	
 	}
 
 	// Set the new ID
