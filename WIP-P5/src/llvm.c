@@ -17,8 +17,7 @@ static int g_lastOpenLabel = -1; // Last opened label ID
 
 static int g_typeTracking[VAR_ARRAY_SIZE]; // Tracking of Index Types
 static int g_nextVarRefIndex = 0; // Next FREE Tracking Reference Index
-static int g_lastGlobalIndex =
-    0; // Last Tracking Index used by a Global Variable
+static int g_lastGlobalIndex = 0; // Last Tracking Index used by a Global Variable
 static int g_globalScope = 0;
 
 
@@ -87,6 +86,15 @@ void codeAux_enterBlock( void ) {
 void codeAux_exitBlock( void ) {
 	g_ident--;
 }
+
+
+// Return the next free VID
+int codeAux_newVid( void ) {
+	int id = g_vid;
+	g_vid++;
+	return id;
+}
+
 
 // Copy Variable Tracking Array
 void codeAux_copyTrackingArray( int* arrayTo , int* arrayFrom ) {
@@ -182,7 +190,8 @@ void debug_printTrackingArray( int* varTracking ) {
 // ---------------------------------------------------------------------------------------------------
 
 
-// Link with AST: Set node tracked INDEX on LLVM Var Array ( mainly or declarations and atributions )
+// Link with AST: Set node tracked INDEX on LLVM Var Array ( mainly for declarations )
+// Return: Track Index Generated
 int track_setVarRef( ABS_node* node ) {
 	switch ( node->tag ) {
 	case DEC_VAR:
@@ -247,24 +256,69 @@ void code_printIdented( const char* msg ) {
 	printf( "%s", msg );
 }
 
+// Code for: LLVM Arith Operation
+// LLVM Artih: <id> = { THIS CODE } id1 , id2
+void code_ArithmeticType( int resultType , int operation ) {
+	char* 	type;
+
+	// Signal to llvm cmd part
+	switch ( resultType ) {
+	case FLOAT:
+		printf( "f" );
+		break;
+	}
+
+	switch ( operation ) {
+	case '+':
+		printf( "add" );
+		break;
+
+	case '-':
+		printf( "sub" );
+		break;
+
+	case '*':
+		printf( "mul" );
+		break;
+
+	case '/':
+		if ( resultType == INT ) {
+			printf( "sdiv" );
+		} else {
+			printf( "div" );
+		}
+		break;
+	}
+
+	// Complements
+	if ( resultType == INT ) {
+		printf( " nsw " );
+	} else {
+		printf( " " );
+	}
+
+	// Operation type
+	type = codeAux_getType( resultType );
+	printf( "%s " , type );
+}
 
 // Print an id on chosen LLVM variable name format
-void code_llvmID_DUMMY( int id ) {
+void code_llvmID_name( int id ) {
 	printf( "v_%d", id );
 }
 
 
 // Print an id on llvm temporary_var format
-void code_llvmID( int id ) {
+void code_llvmID_LOC( int id ) {
 	printf( "%%" );
-	code_llvmID_DUMMY( id );
+	code_llvmID_name( id );
 }
 
 
 // Print an id on llvm global format
 void code_llvmID_GLB( int id ) {
 	printf( "@" );
-	code_llvmID_DUMMY( id );
+	code_llvmID_name( id );
 }
 
 
@@ -277,7 +331,7 @@ void code_llvmID_IDX( int idx , int* varTracking ) {
 		code_llvmID_GLB( id );
 	}
 	else {
-		code_llvmID( id );
+		code_llvmID_LOC( id );
 	}
 }
 
@@ -297,7 +351,7 @@ void code_nodeRepresentation( ABS_node* node , int id ) {
 		break;
 
 	default:
-		code_llvmID( id );
+		code_llvmID_LOC( id );
 		break;
 	}
 }
@@ -328,9 +382,8 @@ void code_nodeType( ABS_node* node  ) {
 
 // Create a new var ( updateglobal id ) and print its reference
 int code_newVar( void ) {
-	int id = g_vid;
-	g_vid++;
-	code_llvmID( id );
+	int id = codeAux_newVid();
+	code_llvmID_LOC( id );
 	return id;
 }
 
@@ -363,9 +416,9 @@ void code_store( int sType , int oId , int dId ) {
 	// Store
 	code_printIdent();
 	printf( "store %s " , type );
-	code_llvmID( oId );
+	code_llvmID_LOC( oId );
 	printf( ", %s* ", type );
-	code_llvmID( dId );
+	code_llvmID_LOC( dId );
 	printf( ", align %d" , size );
 }
 
@@ -387,7 +440,7 @@ void code_storeLiteral( int sId , ABS_node* literal ) {
 	printf( ", " );
 	code_type( type );
 	printf( "* " );
-	code_llvmID( sId );
+	code_llvmID_LOC( sId );
 	printf( ", align %d" , size );
 }
 
@@ -403,7 +456,7 @@ int code_load( int lType , int lId  ) {
 	code_printIdent();
 	id = code_newVar();
 	printf( " = load %s, %s* " , type , type );
-	code_llvmID( lId );
+	code_llvmID_LOC( lId );
 	printf( ", align %d", size );
 
 	return id;
@@ -438,7 +491,7 @@ void code_jumpLabel( int lid ) {
 
 // Generate code for: end current label with: a jump to lid if lid >= 0
 // Only needed to end a label early, with a jump that is not to the next label
-void code_endLabel( int lid ) {
+void code_endLabelWJumpTo( int lid ) {
 	g_lastOpenLabel = -1;
 
 	if ( g_lid >= 0 ) {
@@ -456,7 +509,7 @@ int code_startLabel( void ) {
 
 	// If theres an opened label, finish it with a jump for this new label
 	if ( g_lastOpenLabel >= 0 ) {
-		code_endLabel( labelID );
+		code_endLabelWJumpTo( labelID );
 	}
 
 	// Print Label itself
@@ -464,6 +517,29 @@ int code_startLabel( void ) {
 
 	return labelID;
 }
+
+// Generate code for: <var1> = <var2>
+// Useful for: LLVM Local Var duplication in branches
+void code_LLVMvarCopy( int type , int destinationID , int originIndex , int* varTracking ) {
+	int id2 = varTracking[originIndex];
+	
+	code_printIdent();
+	
+	code_llvmID_LOC( destinationID );
+	
+	printf( " = " );
+	
+	code_ArithmeticType( type , '+' ); 
+	
+	// ZERO
+	type == FLOAT ? printf(" 0.0 ") : printf(" 0 ");
+	printf(" , ");
+
+	// Origin Reference Type
+	code_llvmID_IDX( originIndex , varTracking );
+}
+
+// -----------------------------------------------------------------------------------------------------
 
 void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking );
 int codeExp( ABS_node* exp , int* varTracking ) ;
@@ -575,7 +651,7 @@ int codeCondEval( ABS_node* exp , int* varTracking ) {
 			break;
 		}
 		}
-		code_llvmID( expid );
+		code_llvmID_LOC( expid );
 		return resultId;
 	}
 	}
@@ -626,7 +702,7 @@ void codeCond( ABS_node* exp, int label1, int label2 , int* varTracking ) {
 		int condid = codeCondEval( exp, varTracking );
 		code_printIdent();
 		printf( "br i1 " );
-		code_llvmID( condid );
+		code_llvmID_LOC( condid );
 		printf( ", label " );
 		code_llvmLabel( label1 );
 		printf( ", label " );
@@ -677,9 +753,14 @@ void codeCmd( 		ABS_node* cmd , 	int* varTracking );
 int codeExp( 		ABS_node* exp , 	int* varTracking );
 void codeCmd_ret( 	ABS_node* cmd , 	int* varTracking );
 int codeCmd_atr( 	ABS_node* cmd , 	int* varTracking );
-int codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
+
+void codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
+                    ABS_node* operator2 , int* varTracking );
+                    
+int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
                     ABS_node* operator2 , int* varTracking );
 
+// --------------------
 
 void genASTCode( void ) {
 	ABS_node* thisNode = programNode;
@@ -741,13 +822,13 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 			printf( "[" );
 			if ( thenTracker[i] >= 0 ) {
 				// Changed in the then branch
-				code_llvmID( thenTracker[i] );
+				code_llvmID_LOC( thenTracker[i] );
 				printf( " , " );
 				code_llvmLabel( thenLabel );
 			}
 			else {
 				// Not changed, use the starting reference instead
-				code_llvmID( startTracker[i] );
+				code_llvmID_LOC( startTracker[i] );
 				printf( " , " );
 				code_llvmLabel( orignLabel );
 			}
@@ -759,13 +840,13 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 			// Else Branch Check
 			if ( elseTracker[i] >= 0 ) {
 				// Changed in the else branch
-				code_llvmID( elseTracker[i] );
+				code_llvmID_LOC( elseTracker[i] );
 				printf( " , " );
 				code_llvmLabel( elseLabel );
 			}
 			else {
 				// Not changed, use the starting reference instead
-				code_llvmID( startTracker[i] );
+				code_llvmID_LOC( startTracker[i] );
 				printf( " , " );
 				code_llvmLabel( orignLabel );
 			}
@@ -778,27 +859,44 @@ void codeIfPhi( int orignLabel , int thenLabel , int elseLabel ,
 }
 
 void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
-                   int* blockTracker, int limit ) {
+                   int* phiTracker, int* blockTracker, int limit ) {
+                   
 	int phiId;
-	for ( int i = 0; i < limit; i++ ) {
-		if ( blockTracker[i] != startTracker[i] ) {
-			// Variable changed, phi is needed
+	
+	// Look for changed/PHIs 
+	// ps: LLVM states that PHI comes at top of the BLOCK
+	for ( int i = 0; i < limit; i++ ) {	
+		if ( blockTracker[i] != phiTracker[i] ) {
 			code_printIdent();
-			phiId = code_newVar();
+			code_llvmID_LOC( phiTracker[i] );
+				
+			// Variable changed, phi is needed
 			printf( " = phi " );
 			code_type( g_typeTracking[i] );
 			printf( " " );
-			// Block branch check
+			
+			// Block branch merge
 			printf( "[" );
-			code_llvmID( blockTracker[i] );
+			code_llvmID_LOC( blockTracker[i] );
 			printf( " , " );
 			code_llvmLabel( blockLabel );
 			printf( "] , [" );
-			code_llvmID( startTracker[i] );
+			code_llvmID_LOC( startTracker[i] );
 			printf( " , " );
 			code_llvmLabel( originLabel );
 			printf( "]" );
-			startTracker[i] = phiId;
+			
+			// Update origin tracker
+			startTracker[i] = phiTracker[i];
+		}
+	}
+	
+	// Look for not changed ( or global )
+	for ( int i = 0; i < limit; i++ ) {	
+		if ( blockTracker[i] == phiTracker[i] ) {
+			// Variable not changed or is global
+			// But we could have used PHI reference, we need to set its value
+			code_LLVMvarCopy( g_typeTracking[i] , phiTracker[i] , i , startTracker );	
 		}
 	}
 }
@@ -992,13 +1090,13 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		code_label( thenLabel );
 		genCode_list( cmd->node.cmd.ifcmd.cmd1 , varTrackingThen );
 		thenLastLabel = g_lastOpenLabel;
-		code_endLabel( phiLabel );
+		code_endLabelWJumpTo( phiLabel );
 
 		// Else Label Block
 		code_label( elseLabel );
 		genCode_list( cmd->node.cmd.ifcmd.cmd2 , varTrackingElse );
 		elseLastLabel = g_lastOpenLabel;
-		code_endLabel( phiLabel );
+		code_endLabelWJumpTo( phiLabel );
 
 
 		// Phi Block -> PHI
@@ -1011,36 +1109,57 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 	}
 
 	case CMD_WHILE: {
-		// TODO
-		int labelStart;
-		int labelCond = codeAux_getNewLabel();
-		int labelBlock = codeAux_getNewLabel();
-		int labelEnd = codeAux_getNewLabel();
-		int labelPhi = codeAux_getNewLabel();
+		int i;
+		
+		int labelStart 	= g_lastOpenLabel;
+		int labelCond 	= codeAux_getNewLabel();
+		int labelBlock 	= codeAux_getNewLabel();
+		int labelEnd 	= codeAux_getNewLabel();
+		int labelPhi 	= codeAux_getNewLabel();
 
 		int declaredLimit;
 
 		int varTrackingBlock[VAR_ARRAY_SIZE];
+		int varTrackingPhi[VAR_ARRAY_SIZE];		
 
 		code_printIdented( "; WHILE" );
-
-		labelStart = g_lastOpenLabel;
-
-		codeAux_copyTrackingArray( varTrackingBlock, varTracking );
+		
+		// Register last index declared before While Block Scope
 		declaredLimit = g_nextVarRefIndex;
-		code_endLabel( labelPhi );
+		
+		// Prepare Tracking Arrays
+		// Generate IDs to be used in PHI block
+		// Why? Break cyclic relationship between PHI Block and WhileBody Block
+		for( i = 0 ; i < declaredLimit ; i++ ) {
+			varTrackingPhi[i] = codeAux_newVid();
+		}
+		codeAux_copyTrackingArray( varTrackingBlock, varTrackingPhi );
+		code_endLabelWJumpTo( labelPhi );
+		
+		// Condition Block
 		code_label( labelCond );
-		codeCond( cmd->node.cmd.whilecmd.exp, labelBlock, labelEnd, varTracking );
+		printf( "\t; WHILE - Condition Block" );				
+		codeCond( cmd->node.cmd.whilecmd.exp, labelBlock, labelEnd, varTrackingPhi );
+		
+		// While Body Block		
 		code_label( labelBlock );
+		printf( "\t; WHILE - Body Block" );		
 		genCode_list( cmd->node.cmd.whilecmd.cmd, varTrackingBlock );
-		int blockLastLabel = g_lastOpenLabel;
+		int blockLastLabel = g_lastOpenLabel; // CHECK : PQ?
 		code_jumpLabel( labelPhi );
+		
+		// Phi Block
 		code_label( labelPhi );
-		codeWhilePhi( labelStart, labelBlock , varTracking, varTrackingBlock,
-		              declaredLimit );
-		code_endLabel( labelCond );
-		g_nextVarRefIndex = declaredLimit; //Why?
+		printf( "\t; WHILE - PHI Block" );				
+		codeWhilePhi( labelStart, labelBlock , varTracking, varTrackingPhi, 
+				varTrackingBlock, declaredLimit );
+		              
+		// End block          
+		code_endLabelWJumpTo( labelCond );
 		code_label( labelEnd );
+				
+		// Restore last index declared before While Block Scope
+		g_nextVarRefIndex = declaredLimit; // CHECK: G: Why? R: Discard indexes declared in the while scope
 		break;
 	}
 	}
@@ -1091,7 +1210,7 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 		exp1 		= exp->node.exp.data.operexp.exp1;
 		exp2 		= exp->node.exp.data.operexp.exp2;
 
-		id = codeArithmetic( type , operation , exp1 , exp2 , varTracking );
+		id = codeArithmeticResult( type , operation , exp1 , exp2 , varTracking );
 
 		break;
 	}
@@ -1103,7 +1222,7 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 		code_printIdent();
 		id = code_newVar();
 		printf( " = zext i1 " );
-		code_llvmID( condid );
+		code_llvmID_LOC( condid );
 		printf( " to " );
 		switch ( exp->node.exp.type ) {
 		case INT: {
@@ -1206,65 +1325,19 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 	return id;
 }
 
-
 // Generate code for: LLVM arit expression
-// Returns ID of the temp_var of the result
-int codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
+void codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
                     ABS_node* operator2 , int* varTracking ) {
-	int 	id;
+                    
 	int 	id1;
 	int 	id2;
-	char* 	type;
-
+	
 	// Generate code for both operators
 	operator1 ? id1 = codeExp( operator1 , varTracking ) : 0;
 	operator2 ? id2 = codeExp( operator2 , varTracking ) : 0;
 
-	// LLVM code: left side
-
-	code_printIdent();
-	id = code_newVar();
-	printf( " = " );
-
-	// Signal to llvm cmd part
-	switch ( resultType ) {
-	case FLOAT:
-		printf( "f" );
-		break;
-	}
-
-	switch ( operation ) {
-	case '+':
-		printf( "add" );
-		break;
-
-	case '-':
-		printf( "sub" );
-		break;
-
-	case '*':
-		printf( "mul" );
-		break;
-
-	case '/':
-		if ( resultType == INT ) {
-			printf( "sdiv" );
-		} else {
-			printf( "div" );
-		}
-		break;
-	}
-
-	// Complements
-	if ( resultType == INT ) {
-		printf( " nsw " );
-	} else {
-		printf( " " );
-	}
-
-	// Operation type
-	type = codeAux_getType( resultType );
-	printf( "%s " , type );
+	// operation name and type
+	code_ArithmeticType( resultType , operation );
 
 	// Reference 1
 	operator1 ? code_nodeRepresentation( operator1 , id1 ) : printf( "0" );
@@ -1273,11 +1346,23 @@ int codeArithmetic( int resultType , int operation , ABS_node* operator1 ,
 	printf( " , " );
 
 	// Reference 2
-	operator2 ? code_nodeRepresentation( operator2 , id2 ) : printf( "0" );
+	operator2 ? code_nodeRepresentation( operator2 , id2 ) : printf( "0" );            
+}
+
+
+// Generate code for: LLVM arit expression with atribuition to a Local ID
+// Returns ID of the Local with the result
+int codeArithmeticResult( int resultType , int operation , ABS_node* operator1 ,
+                    ABS_node* operator2 , int* varTracking ) {
+	int 	id;
+
+	code_printIdent();
+	id = code_newVar();
+	printf( " = " );
+	codeArithmetic( resultType , operation , operator1 , operator2 , varTracking );
 
 	return id;
 }
-
 
 
 /*
@@ -1318,7 +1403,7 @@ int codeCmd_atr( ABS_node* cmd , int* varTracking ) {
 	switch ( exp->tag ) {
 	case LIT_INT:
 	case LIT_FLOAT:
-		retId = codeArithmetic( iVarType , '+' , NULL , exp , varTracking );
+		retId = codeArithmeticResult( iVarType , '+' , NULL , exp , varTracking );
 		break;
 
 	default:

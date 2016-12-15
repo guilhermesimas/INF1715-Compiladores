@@ -1,21 +1,24 @@
 float monga_float( float a ) {
-	float b;
+	int i,j;
 	float c;
-	float d;
-	b = 1;
-	c = 1;
-	d = (b==c);
-
-	if(c<a) {
-		d = 4;
-		if( c==b ) { 
-			d=2;
-		}
-		
-	}
-
 	
-	return d;
+	i = 0;
+	j = 0;
+	
+	c = 0;
+	
+	while( i < 10 ) {
+		i = i + 1;
+		
+		j = 0;
+		while( j < 10 ) {
+			j = j + 1;
+			
+			c = c + 1.0;
+		}
+	}
+	
+	return c;
 }
 
 int monga_int( int a ) {
