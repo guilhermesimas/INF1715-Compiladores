@@ -1,21 +1,14 @@
-int gb1;
-int gb2;
-int gb3;
-int gb4;
-
 int monga_int( int a ) {
-	gb1 = a;
-	
 	return a;
 }
 
 
 float monga_float( float a ) {
-	int b;
+	char b;
 	
-	b = monga_int( 15 );
+	b = 20;
 
-	return gb1;
+	return b;
 }
 
 

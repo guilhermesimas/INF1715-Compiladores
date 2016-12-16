@@ -526,25 +526,37 @@ int code_startLabel( void ) {
 	return labelID;
 }
 
+// Generate code for: 0 or 0.0 ( type dependent )
+void code_zero( int type ) {
+	if( type == FLOAT ) {
+		printf(" 0.0 ");
+	}
+	else {
+		printf(" 0 ");
+	}
+}
+
 // Generate code for: <var1> = <var2>
 // Useful for: LLVM Local Var duplication in branches
 void code_LLVMvarCopy( int type , int destinationID , int originIndex , int* varTracking ) {
-	int id2 = varTracking[originIndex];
+	int oId;
 	
+	// Global Check
+	if( originIndex <= g_lastGlobalIndex ) {
+		oId = code_load( originIndex , varTracking );
+	}
+	else {
+		oId = varTracking[originIndex];
+	}
+	
+	// Copy code
 	code_printIdent();
-	
 	code_llvmID_LOC( destinationID );
-	
 	printf( " = " );
-	
 	code_ArithmeticType( type , '+' ); 
-	
-	// ZERO
-	type == FLOAT ? printf(" 0.0 ") : printf(" 0 ");
+	code_zero( type );
 	printf(" , ");
-
-	// Origin Reference Type
-	code_llvmID_IDX( originIndex , varTracking );
+	code_llvmID_LOC( oId );
 }
 
 // -----------------------------------------------------------------------------------------------------
@@ -878,7 +890,9 @@ void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
 	// Look for changed/PHIs 
 	// ps: LLVM states that PHI comes at top of the BLOCK
 	for ( int i = 0; i < limit; i++ ) {	
-		if ( blockTracker[i] != phiTracker[i] ) {
+		if( phiTracker[i] < 0 || blockTracker[i] < 0 ) continue;
+	
+		if (blockTracker[i] != phiTracker[i]) {
 			code_printIdent();
 			code_llvmID_LOC( phiTracker[i] );
 				
@@ -893,7 +907,12 @@ void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
 			printf( " , " );
 			code_llvmLabel( blockLabel );
 			printf( "] , [" );
-			code_llvmID_LOC( startTracker[i] );
+			if( startTracker[i] >= 0 ) {
+				code_llvmID_LOC( startTracker[i] );
+			}
+			else {
+				code_zero( g_typeTracking[i] );
+			}
 			printf( " , " );
 			code_llvmLabel( originLabel );
 			printf( "]" );
@@ -905,6 +924,8 @@ void codeWhilePhi( int originLabel, int blockLabel, int* startTracker,
 	
 	// Look for not changed ( or global )
 	for ( int i = 0; i < limit; i++ ) {	
+		if ( phiTracker[i] < 0 ) continue;
+		 
 		if ( blockTracker[i] == phiTracker[i] ) {
 			// Variable not changed or is global
 			// But we could have used PHI reference, we need to set its value
@@ -959,7 +980,8 @@ void codeDeclVar( ABS_node* node , int* varTracking ) {
 		code_llvmID_GLB( id );
 		printf(" = common global ");
 		code_type( iType );
-		printf(" 0 , align %d" , size );
+		code_zero( iType );		
+		printf(" , align %d" , size );
 		
 		// Control
 		g_lastGlobalIndex = id;
@@ -1111,7 +1133,8 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		int varTrackingElse[VAR_ARRAY_SIZE];
 
 		// LLVM Commentary
-		code_printIdented( "; IF" );
+		printf("\n");
+		code_printIdented( "; IF - Conditions Block " );
 
 		// Generate label IDs
 		startLabel  = g_lastOpenLabel;
@@ -1127,15 +1150,16 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		// Code Cond
 		codeCond( cmd->node.cmd.ifcmd.exp, thenLabel, elseLabel , varTracking );
 
-
 		// Then Label Block
 		code_label( thenLabel );
+		printf("\t; IF - Then Block ");
 		genCode_list( cmd->node.cmd.ifcmd.cmd1 , varTrackingThen );
 		thenLastLabel = g_lastOpenLabel;
 		code_endLabelWJumpTo( phiLabel );
 
 		// Else Label Block
 		code_label( elseLabel );
+		printf("\t; IF - Else Block ");
 		genCode_list( cmd->node.cmd.ifcmd.cmd2 , varTrackingElse );
 		elseLastLabel = g_lastOpenLabel;
 		code_endLabelWJumpTo( phiLabel );
@@ -1143,6 +1167,7 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 
 		// Phi Block -> PHI
 		code_label( phiLabel );
+		printf("\t; IF - Phi Block ");
 		codeIfPhi( startLabel , thenLastLabel , elseLastLabel , varTracking ,
 		           varTrackingThen , varTrackingElse , declaredLimit );
 		g_nextVarRefIndex = declaredLimit;
@@ -1164,6 +1189,7 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		int varTrackingBlock[VAR_ARRAY_SIZE];
 		int varTrackingPhi[VAR_ARRAY_SIZE];		
 
+		printf("\n");
 		code_printIdented( "; WHILE" );
 		
 		// Register last index declared before While Block Scope
@@ -1173,9 +1199,26 @@ void codeCmd( ABS_node* cmd , int* varTracking ) {
 		// Generate IDs to be used in PHI block
 		// Why? Break cyclic relationship between PHI Block and WhileBody Block
 		for( i = 0 ; i < declaredLimit ; i++ ) {
-			varTrackingPhi[i] = codeAux_newVid();
+			if( i > g_lastGlobalIndex ) {
+				varTrackingPhi[i] = codeAux_newVid();
+			}
+			else {
+				// Set to not be created in PHI merge
+				varTrackingPhi[i] = -1;
+			}
 		}
-		codeAux_copyTrackingArray( varTrackingBlock, varTrackingPhi );
+		
+		// Block Array
+		for( i = 0 ; i < declaredLimit ; i++ ) {
+			if( varTracking[i] >= 0 ) { 
+				varTrackingBlock[i] = varTrackingPhi[i];
+			}
+			else {
+				// Not init'ed before block start
+				varTrackingBlock[i] = -1;
+			}
+		}
+
 		code_endLabelWJumpTo( labelPhi );
 		
 		// Condition Block
@@ -1223,19 +1266,19 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 		
 		trackIndex = track_getVarRef( exp );
 		tId = track_getVarId( exp , varTracking );
-
-		// Check initialization
-		if ( tId < 0 ) {
-			TOL_error( "Variable referenced before initialization" , exp->line ,
-			           codeAux_getNodeName( exp ) );
-		}
 		
-		// Global transformation to temporary local
+		// Local or Global?
 		if( trackIndex <= g_lastGlobalIndex ) {
+			// Global: transformation to temporary local
 			// Load global
 			id = code_load( trackIndex , varTracking );	
 		}
 		else {
+			// Local - Check initialization
+			if ( tId < 0 ) {
+				TOL_error( "Variable referenced before initialization" , exp->line ,
+					       codeAux_getNodeName( exp ) );
+			}		
 			// Return expression result
 			id = tId;
 		}
@@ -1262,15 +1305,34 @@ int codeExp( ABS_node* exp , int* varTracking ) {
 		ABS_node* exp1;
 		ABS_node* exp2;
 
-		type 		= exp->node.exp.type;
 		operation 	= exp->node.exp.data.operexp.opr;
 		exp1 		= exp->node.exp.data.operexp.exp1;
 		exp2 		= exp->node.exp.data.operexp.exp2;
+		type 		= exp1->node.exp.type;
 
 		id = codeArithmeticResult( type , operation , exp1 , exp2 , varTracking );
 
 		break;
 	}
+	
+	case EXP_UNOP: {
+		int type;
+		int operation;
+		ABS_node* exp1;
+
+		operation 	= exp->node.exp.data.operexp.opr;
+		exp1 		= exp->node.exp.data.operexp.exp1;
+		type 		= exp1->node.exp.type;
+		
+		switch( operation ) {
+			case '-': {
+				id = codeArithmeticResult( type , '-' , NULL , exp1 , varTracking );			
+				break; 
+			}
+		}
+
+		break;
+	}	
 
 
 	case EXP_COMP:

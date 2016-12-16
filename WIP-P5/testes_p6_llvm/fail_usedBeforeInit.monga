@@ -1,0 +1,12 @@
+/*
+Main Function
+*/
+float monga_float( float a ) {
+	int b;
+	
+	a = b;
+	
+	return a;
+}
+
+

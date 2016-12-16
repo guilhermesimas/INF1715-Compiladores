@@ -1,0 +1,53 @@
+float iGlobal;
+
+int globalSet( float a , int b ) {
+	iGlobal = ( a + b ) * 2;
+	return 1;
+}
+
+/*
+Main Function
+*/
+float monga_float( float a ) {
+	float v1;
+	int maxI , maxJ , i , j;
+	int flagStop;
+
+	/*
+	Loop should set v1 to 90
+	*/
+	v1 = 0;
+	maxI = 9;
+	maxJ = 10;
+	i = 0;
+	while( i < maxI ) {
+		i = i + 1;
+		
+		j = 0;
+		while( j < maxJ ) {
+			j = j + 1;
+			v1 = v1 + 1;
+		}
+	}
+	
+	/*
+	Global should be set to positive ( 200.0 ) under the globalSet function
+	*/
+	iGlobal = -999;
+	v1 = globalSet( v1 , 10 );
+	
+	/*
+	If Checker
+	*/	
+	flagStop = 0;
+	if( ( iGlobal < 0 || v1 < 0 ) && !flagStop ) {
+		iGlobal = -777;
+	}
+	
+	/*
+	If everything was ok, iGlobal should be positive ( 200.0 )
+	*/		
+	return iGlobal;
+}
+
+

@@ -8,12 +8,12 @@ Guilherme Simas					- ⁠⁠⁠1311812
 
 OBSERVAÇÃO!!! Este arquivo é referente a todas as etapas do trabalho.
 Sendo atualizado em cada nova etapa.
-Para a etapa atual ( ETAPA 5 ) leia apenas o tópico 7.
+Para a etapa atual ( ETAPA 6 - FINAL ) leia apenas o tópico 8.
 
 
 0) 	Compilando a etapa atual
 	Basta executar "make"
-	Output: main_p5.out
+	Output: main_p6.out
 
 
 1) Requisitos
@@ -23,6 +23,7 @@ Para a etapa atual ( ETAPA 5 ) leia apenas o tópico 7.
 	flex
 	bison
 	diff
+	llvm
 
 
 2) Decisões de projeto
@@ -140,20 +141,38 @@ Para a etapa atual ( ETAPA 5 ) leia apenas o tópico 7.
 
 
 
-7) Testes Codigo - Geração e compilação do codigo LLVM
-	7.1) Conceito
+7) Testes Codigo - Geração e compilação do codigo LLVM - Parte 1
+	Obsoleto, substituido pelo topico seguinte ( 8 )
+	
+	
+8) Testes Codigo - Geração e compilação do codigo LLVM - Parte 2
+	8.1) Decisões sobre LLVM
+	-Variaveis locais seguem o conceito SSA:
+	--Registro para a construção do PHI é feito por Array ( varTracking[] )
+	--A AST guarda o INDICE da variavel no VARTRACKING
+	--varTracking[i] guarda o ultimo id do LLVM da variavel
+	--Indices declarados em um escopo são descartados quando o escopo acaba.
+			Ou seja, são liberados para reutilização.		
+	-Variaveis seguem o nome [%|@]v_<int>
+	-Labels seguem o nome l_<int>
+	-Condicionais fazem curto circuito
+	-Valores de decisão são inteiros
+	-Não gera código para Array
+			Motivo: Não conseguimos fazer um SSA para array simples o suficiente
+	
+	8.2) Conceito do Programa
 	Com base em um arquivo de entrada:
 	-Executa os topicos anteriores
 	-Gera o codigo LLVM no arquivo *.ll a partir do arquivo *.monga
 	-Gera o *.o do codigo LLVM gerado
-	-Compila os "llvm_print_int.c" e "llvm_print_float.c" ligando com o *.o gerado
+	-Compila o "llvm_print_float.c" ligando com o *.o gerado
 	
 	Os arquivos de teste referentes a esta etapa residem na pasta:
-	testes_p5_llvm
+	testes_p6_llvm
 	
 	Falta geração de codigo para: IF, WHILE e ARRAY
 
-	7.2) Teste basico de funcionamento
+	8.3) Teste basico de funcionamento
 	Comando: make LLVM
 	Monta tudo, desde o *.lex e ao final executa um teste geral, o "geral.monga"
 
@@ -166,8 +185,8 @@ Para a etapa atual ( ETAPA 5 ) leia apenas o tópico 7.
 	Principais etapas: 
 	-Gera o LLVM do "geral.monga"
 	-Compila o LLVM em Obj
-	-Compila "llvm_print_int.c" e "llvm_print_float.c" ligando com o *.o gerado
-	-Executa o resultado da compilação e imprime a saida na tela
+	-Compila "llvm_print_float.c" ligando com o *.o gerado
+	-Executa o resultado da compilação e imprime a saida na tela	
 	
 		
 	

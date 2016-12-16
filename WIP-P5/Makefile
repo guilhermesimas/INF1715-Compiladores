@@ -22,13 +22,14 @@ tipFilesA = $(wildcard $(tipTestFolder)*.monga)
 tipFilesB = $(patsubst $(tipTestFolder)%,%,$(tipFilesA))
 tipFileNames = $(patsubst %.monga,%,$(tipFilesB))
 
-codeTestFolder = ./testes_p5_llvm/
+codeTestFolder = ./testes_p6_llvm/
 codeFilesA = $(wildcard $(codeTestFolder)*.monga)
 codeFilesB = $(patsubst $(codeTestFolder)%,%,$(codeFilesA))
 codeFileNames = $(patsubst %.monga,%,$(codeFilesB))
 
 
-all:  mainp5
+
+all:  mainp6
 
 LexTestes: header mainp1
 	@echo " "	
@@ -158,20 +159,18 @@ Types: header mainp4
 	fi;\
 	
 	
-LLVM: header mainp5
+LLVM: header mainp6
 	@echo " "	
 	@echo "LLVM: Executando um teste generico:"
 	@echo " "	
 	
 	@cat -n $(codeTestFolder)geral.monga		
 	
-	@./main_p5.out debug <$(codeTestFolder)geral.monga
-	@./main_p5.out <$(codeTestFolder)geral.monga >$(codeTestFolder)geral.ll	
+	@./main_p6.out debug <$(codeTestFolder)geral.monga
+	@./main_p6.out <$(codeTestFolder)geral.monga >$(codeTestFolder)geral.ll	
 	@llc -filetype=obj $(codeTestFolder)geral.ll
-	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_int.c
-	@./main_p5_monga.out int
-	@gcc $(PARAM) -o main_p5_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_float.c
-	@./main_p5_monga.out int	
+	@gcc $(PARAM) -o main_p6_monga.out $(codeTestFolder)geral.o $(sourceFiles)llvm_print_float.c
+	@./main_p6_monga.out int	
 	
 	@if [ $$? -eq 0 ];\
 	then \
@@ -216,6 +215,12 @@ mainp5: header absSyntaxTree astKnit types codeGen typeCheck monga tools $(sourc
 	@echo "Compilando a main_5 e ligando:"
 	gcc $(PARAM) -o main_p5.out absSyntaxTree.o astKnit.o typeCheck.o llvm.o types.o lex.yy.o monga.tab.o tools.o $(sourceFiles)main_p5.c 
 
+
+mainp6: header absSyntaxTree astKnit types codeGen typeCheck monga tools $(sourceFiles)main_p6.c 
+	@echo " "
+	@echo "Compilando a main_5 e ligando:"
+	gcc $(PARAM) -o main_p6.out absSyntaxTree.o astKnit.o typeCheck.o llvm.o types.o lex.yy.o monga.tab.o tools.o $(sourceFiles)main_p6.c 
+	
 
 lexcode: header $(sourceFiles)monga.lex
 	@echo " " 
